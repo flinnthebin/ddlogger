@@ -1,3 +1,3 @@
 #!/usr/bin/env sh
 
-sudo dd if=/dev/input/by-id/usb-Keychron_Keychron_Q11-if02-event-kbd of=out.swp bs=72 count=10
+sudo dd if=/dev/input/by-id/usb-Keychron_Keychron_Q11-if02-event-kbd of=out.swp bs=24 count=100 iflag=fullblock
