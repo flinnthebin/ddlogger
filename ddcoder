@@ -1,0 +1,66 @@
+#!/usr/bin/python3
+
+import struct
+
+#   /usr/include/linux/input.h
+#
+#   struct input_event {
+#   #if (__BITS_PER_LONG != 32 || !defined(__USE_TIME_BITS64)) && !defined(__KERNEL__)
+#       struct timeval time;
+#   #define input_event_sec time.tv_sec             // 8-byte signed long long
+#   #define input_event_usec time.tv_usec           // 8-byte signed long long
+#   #else
+#       __kernel_ulong_t __sec;
+#   #if defined(__sparc__) && defined(__arch64__)
+#       unsigned int __usec;
+#       unsigned int __pad;
+#   #else
+#       __kernel_ulong_t __usec;
+#   #endif
+#   #define input_event_sec  __sec
+#   #define input_event_usec __usec
+#   #endif
+#       __u16 type;                                 // 2-byte unsigned short
+#       __u16 code;                                 // 2-byte unsigned short
+#       __s32 value;                                // 4-byte signed int
+#   };
+#
+
+# https://docs.python.org/3/library/struct.html
+input_struct = 'q q H H i'  # tv_sec, tv_usec, type, code, value
+struct_size = struct.calcsize(input_struct)
+
+# https://www.kernel.org/doc/html/v4.14/input/event-codes.html
+# /usr/include/linux/input-event-codes.h (EV_KEY)
+keyboard = 0x01
+
+key_vals = {
+    0: 'release',
+    1: 'depress',
+    2: 'repeat',
+}
+
+key_codes = {
+    17: 'W',
+    30: 'A',
+    31: 'S',
+    32: 'D',
+}
+
+with open('out.swp', 'rb') as infile:
+    while True:
+        event = infile.read(struct_size)
+        if not event:
+            break
+
+        (tv_sec, tv_usec, type, code, value) = struct.unpack(input_struct, event)
+
+        if type == keyboard:
+            key_val = key_vals.get(value, f"Unknown({value})")
+            if key_val == 'depress':
+                key_name = key_codes.get(code, f"Unknown({code})")
+                print(f"{key_name}")
+            else:
+                pass
+        else:
+            pass
