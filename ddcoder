@@ -26,41 +26,69 @@ import struct
 #   };
 #
 
+#####################
+#                   #
+#      CONFIG       #
+#                   #
+#####################
+
 # https://docs.python.org/3/library/struct.html
-input_struct = 'q q H H i'  # tv_sec, tv_usec, type, code, value
-struct_size = struct.calcsize(input_struct)
+ISTRUCT = 'q q H H i'  # tv_sec, tv_usec, type, code, value
+SSIZE = struct.calcsize(ISTRUCT)
 
 # https://www.kernel.org/doc/html/v4.14/input/event-codes.html
 # /usr/include/linux/input-event-codes.h (EV_KEY)
-keyboard = 0x01
+EV = {
+    0x01: 'keyboard'
+}
 
-key_vals = {
+KVALS = {
     0: 'release',
     1: 'depress',
     2: 'repeat',
 }
 
-key_codes = {
+KCODES = {
     17: 'W',
     30: 'A',
     31: 'S',
     32: 'D',
 }
 
-with open('out.swp', 'rb') as infile:
-    while True:
-        event = infile.read(struct_size)
-        if not event:
-            break
+#####################
+#                   #
+#      CONFIG       #
+#                   #
+#####################
 
-        (tv_sec, tv_usec, type, code, value) = struct.unpack(input_struct, event)
+class Decoder:
+    def __init__(self, input_struct=ISTRUCT, struct_size=SSIZE, event=EV, key_vals=KVALS, key_codes=KCODES):
+        self.input_struct = input_struct
+        self.struct_size = struct_size
+        self.event = event
+        self.key_vals = key_vals
+        self.key_codes = key_codes
 
-        if type == keyboard:
-            key_val = key_vals.get(value, f"{value}")
-            if key_val == 'depress':
-                key_name = key_codes.get(code, f"{code}")
-                print(f"{key_name}")
-            else:
-                pass
-        else:
-            pass
+    def proc_file(self):
+        with open('out.swp', 'rb') as infile:
+            while True:
+                block = infile.read(self.struct_size)
+                if not block:
+                    break
+
+                (tv_sec, tv_usec, type, code, value) = struct.unpack(self.input_struct, block)
+                event_type = self.event.get(type, f"{type}")
+                if event_type == 'keyboard':
+                    key_val = self.key_vals.get(value, f"{value}")
+                    if key_val == 'depress':
+                        key_name = self.key_codes.get(code, f"{code}")
+                        print(f"{key_name}")
+                    else:
+                        pass
+                else:
+                    pass
+
+if __name__ == "__main__":
+    decoder = Decoder()
+    decoder.proc_file()
+
