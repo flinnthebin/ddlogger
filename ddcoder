@@ -56,9 +56,9 @@ with open('out.swp', 'rb') as infile:
         (tv_sec, tv_usec, type, code, value) = struct.unpack(input_struct, event)
 
         if type == keyboard:
-            key_val = key_vals.get(value, f"Unknown({value})")
+            key_val = key_vals.get(value, f"{value}")
             if key_val == 'depress':
-                key_name = key_codes.get(code, f"Unknown({code})")
+                key_name = key_codes.get(code, f"{code}")
                 print(f"{key_name}")
             else:
                 pass
