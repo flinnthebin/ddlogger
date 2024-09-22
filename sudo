@@ -1,1 +1,0 @@
-SUBSYSTEM=="input", GROUP="input", MODE="660 /etc/udev/rules.d/69-input.rules
