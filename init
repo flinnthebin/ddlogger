@@ -4,23 +4,35 @@ target=""
 
 find_device() {
   device=$1
-  if timeout 5 dd if="$device" of=/dev/null bs=24 count=10 iflag=fullblock 2>/dev/null; then
+  echo "Testing device: $device"
+
+  # Resolve symlink
+  resolved_device=$(readlink -f "$device")
+  echo "Resolved device: $resolved_device"
+  ls -l "$resolved_device"   # Device permissions 
+  groups $(whoami)           # User groups
+
+  if timeout 5 dd if="$resolved_device" of=/dev/null bs=24 count=10 iflag=fullblock 2>/dev/null; then
+    echo "$device ($resolved_device) valid"
     return 0
   else
+    echo "$device ($resolved_device) not valid"
     return 1
   fi
 }
 
 while true; do
   for device in /dev/input/by-id/*-event-kbd; do
+    echo "$device"
     if find_device "$device"; then
-      target="$device"
+      # Set target to event symlink
+      target=$(readlink -f "$device")
       break 2
     fi
     sleep 1
   done
   if [ -z "$target" ]; then
-    sleep 2
+    sleep 1
   fi
 done
 

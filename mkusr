@@ -1,0 +1,16 @@
+#!/usr/bin/env sh
+
+USR=$(whoami)
+
+if getent group input >/dev/null; then
+    :
+else
+    sudo groupadd input
+fi
+
+sudo usermod -aG input "$USR"
+
+echo 'SUBSYSTEM=="input", GROUP="input", MODE="660", RUN{builtin}+="uaccess"' | sudo tee /etc/udev/rules.d/69-input.rules > /dev/null
+
+sudo udevadm control --reload-rules
+sudo udevadm trigger
