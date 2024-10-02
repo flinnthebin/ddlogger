@@ -102,11 +102,11 @@ class Decoder:
         key_val = self.key_vals.get(event_type.value, f"{event_type.value}")
         if key_val == 'depress':
             key_name = self.keyboard_chars.get(event_type.code, f"{event_type.code}")
-            character = key_name.upper() if self.capslock == True else key_name.lower()
+            character = key_name.upper() if self.capslock else key_name.lower()
             print(f"{character}")
 
     def handle_led_event(self, event_type):
-        led_name = self.led_type.get(event.code, f"Unknown({event_type.code})")
+        led_name = self.led_type.get(event_type.code, f"{event_type.code}")
         if led_name == 'caps':
             self.capslock = bool(event_type.value)
 
