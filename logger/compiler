@@ -1,8 +1,19 @@
 #!/bin/bash
 
-# List of available architectures
+#####################
+#                   #
+#      CONFIG       #
+#                   #
+#####################
+
 ARCHS=("x86-64" "i686" "aarch64")
-ARCH_NAMES=("Standard 64-bit" "Standard 32-bit" "ARM 64-bit")
+ARCH_NAMES=("x86 64-bit" "P6 Microarchitecture (32-bit)" "ARM 64-bit")
+
+#####################
+#                   #
+#      CONFIG       #
+#                   #
+#####################
 
 compile() {
     case $1 in
@@ -22,13 +33,15 @@ compile() {
     esac
 }
 
+clear && printf '\e[3J'
+
 while true; do
-    echo "Select the target architecture:"
+    echo "Choose target architecture:"
     for i in "${!ARCHS[@]}"; do
         echo "$((i + 1)). ${ARCH_NAMES[$i]} (${ARCHS[$i]})"
     done
 
-    read -p "Enter the number of your choice: " choice
+    read -p "Enter target number: " choice
 
     if [[ $choice -ge 1 && $choice -le ${#ARCHS[@]} ]]; then
         ARCH=${ARCHS[$((choice - 1))]}
@@ -36,7 +49,8 @@ while true; do
         compile "$ARCH"
         break
     else
-        echo "Invalid choice. Please try again."
+        echo "Invalid selection."
+        clear && printf '\e[3J'
     fi
 done
 
