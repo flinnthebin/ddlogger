@@ -1,0 +1,5 @@
+BasedOnStyle: llvm
+IndentWidth: 4
+NamespaceIndentation: Inner
+QualifierAlignment: Right
+PointerAlignment: Left

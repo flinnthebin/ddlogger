@@ -3,36 +3,37 @@
 #ifndef LOGGER_H
 #define LOGGER_H
 
+#include "keymap.h"
 #include <linux/input.h>
 #include <string>
 #include <unordered_map>
 
 class Logger {
-public:
-  static Logger &get_instance();
+  public:
+    static Logger& get_instance();
 
-  Logger(const Logger &) = delete;
-  Logger &operator=(const Logger &) = delete;
+    Logger(Logger const&) = delete;
+    Logger& operator=(Logger const&) = delete;
 
-  auto init(const std::string &event_ID = "") -> bool;
-  auto check_init() const -> bool;
+    auto init(std::string const& event_ID = "") -> bool;
+    auto check_init() const -> bool;
 
-  auto start() -> void;
-  auto kill() -> void;
+    auto start() -> void;
+    auto kill() -> void;
 
-private:
-  Logger();
-  ~Logger();
+  private:
+    Logger();
+    ~Logger();
 
-  int fd_;
-  bool initialized_;
-  std::string ev_init_;
-  bool running_;
-  std::unordered_map<unsigned int, std::string> keymap_;
+    int fd_;
+    bool initialized_;
+    std::string ev_init_;
+    bool running_;
+    keymap_t keymap_;
 
-  auto find_kbd() -> std::string;
-  auto ev_reader() -> void;
-  auto get_keychar(unsigned int code) -> const char *;
+    auto find_kbd() -> std::string;
+    auto ev_reader() -> void;
+    auto get_keychar(unsigned int code) -> char const*;
 };
 
 #endif // LOGGER_H

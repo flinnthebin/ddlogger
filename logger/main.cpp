@@ -4,7 +4,7 @@
 
 int main() {
 
-    const char* pr_name = "normal-process";
+    char const* pr_name = "normal-process";
     prctl(PR_SET_NAME, pr_name, 0, 0, 0);
 
     Logger& logger = Logger::get_instance();
