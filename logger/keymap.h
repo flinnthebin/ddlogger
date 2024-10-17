@@ -4,6 +4,7 @@
 #define KEYMAP_H
 
 #include <unordered_map>
+
 #include <string>
 
 struct key_info {
@@ -11,6 +12,7 @@ struct key_info {
 	unsigned int key_code;
 	std::string  key_char;
 };
+
 using keymap_t = std::unordered_map<std::string, key_info>;
 
 extern keymap_t const keymap;

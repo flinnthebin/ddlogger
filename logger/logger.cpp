@@ -1,9 +1,11 @@
 // logger.cpp
 
 #include "logger.h"
+
 #include <linux/input-event-codes.h>
 #include <sys/stat.h>
 #include <sys/types.h>
+
 #include <cstring>
 #include <fcntl.h>
 #include <filesystem>
@@ -104,8 +106,8 @@ auto Logger::find_kbd() -> std::string {
 
 				int fd = open(resolved_path.c_str(), O_RDONLY | O_NONBLOCK);
 				if (fd == -1) {
-					std::cerr << "logger (kbd) failed to open device: " << resolved_path << ": " << strerror(errno)
-					          << std::endl;
+					std::cerr
+					    << "logger (kbd) failed to open device: " << resolved_path << ": " << strerror(errno) << std::endl;
 					continue;
 				}
 
