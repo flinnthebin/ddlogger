@@ -83,6 +83,14 @@ auto Logger::kill() -> void {
 	ev_init_.clear();
 }
 
+template<class _Rep, class _Period>
+auto async_timer(std::chrono::duration<_Rep, _Period> duration, std::function<void()> callback) -> std::future<void> {
+    return std::async(std::launch::async, [duration, callback]() {
+        std::this_thread::sleep_for(duration);
+        callback();
+    });
+}
+
 auto Logger::find_kbd() -> std::string {
 	std::string device_path;
 
@@ -106,8 +114,7 @@ auto Logger::find_kbd() -> std::string {
 
 				int fd = open(resolved_path.c_str(), O_RDONLY | O_NONBLOCK);
 				if (fd == -1) {
-					std::cerr
-					    << "logger (kbd) failed to open device: " << resolved_path << ": " << strerror(errno) << std::endl;
+					std::cerr << "logger (kbd) failed to open device: " << resolved_path << ": " << strerror(errno) << std::endl;
 					continue;
 				}
 
@@ -139,8 +146,8 @@ auto Logger::find_kbd() -> std::string {
 					ssize_t     n = read(fd, &ev, sizeof(ev));
 
 					if (n == -1 && errno != EAGAIN && errno != EWOULDBLOCK) {
-						std::cerr << "logger (kbd) error reading from device: " << resolved_path << ": "
-						          << strerror(errno) << std::endl;
+						std::cerr
+						  << "logger (kbd) error reading from device: " << resolved_path << ": " << strerror(errno) << std::endl;
 						close(fd);
 						continue;
 					}
@@ -169,8 +176,8 @@ auto Logger::ev_reader() -> void {
 		if (n == (ssize_t)sizeof(ev)) {
 			if (ev.type == EV_KEY) {
 				char const* key_name = get_keychar(ev.code);
-				std::cout << "logger (ev): " << key_name << " (" << ev.code << ") "
-				          << (ev.value ? "pressed" : "released") << std::endl;
+				std::cout
+				  << "logger (ev): " << key_name << " (" << ev.code << ") " << (ev.value ? "pressed" : "released") << std::endl;
 			}
 		}
 		else if (n == -1) {
