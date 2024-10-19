@@ -91,10 +91,24 @@ auto async_timer(std::chrono::duration<_Rep, _Period> duration, std::function<vo
 	});
 }
 
+auto Logger::fd_monitor(signed int fd, fd_set fds) -> signed int {
+
+	struct timeval timeout;
+	timeout.tv_sec  = 1;
+	timeout.tv_usec = 0;
+
+	FD_ZERO(&fds);
+	FD_SET(fd, &fds);
+	
+	return select(fd + 1, &fds, nullptr, nullptr, &timeout);
+}
+
 auto Logger::find_kbd() -> std::string {
 	std::string device_path;
+	const std::string hardware_path = "/dev/input/by-id";
+    const std::string kbd_id = "-event-kbd";
 
-	std::filesystem::path const input_dir("/dev/input/by-id");
+	std::filesystem::path const input_dir(hardware_path);
 
 	if (!std::filesystem::exists(input_dir) || !std::filesystem::is_directory(input_dir)) {
 		std::cerr << "logger (kbd) bad input directory: " << input_dir << std::endl;
@@ -104,7 +118,7 @@ auto Logger::find_kbd() -> std::string {
 	for (auto const& file : std::filesystem::directory_iterator(input_dir)) {
 		if (file.is_symlink() || file.is_character_file()) {
 			auto const& path = file.path();
-			if (path.filename().string().find("-event-kbd") != std::string::npos) {
+			if (path.filename().string().find(kbd_id) != std::string::npos) {
 				std::error_code       ec;
 				std::filesystem::path resolved_path = std::filesystem::canonical(path, ec);
 				if (ec) {
@@ -112,28 +126,21 @@ auto Logger::find_kbd() -> std::string {
 					continue;
 				}
 
-				int fd = open(resolved_path.c_str(), O_RDONLY | O_NONBLOCK);
+				auto fd = open(resolved_path.c_str(), O_RDONLY | O_NONBLOCK);
 				if (fd == -1) {
 					std::cerr << "logger (kbd) failed to open device: " << resolved_path << ": " << strerror(errno) << std::endl;
 					continue;
 				}
 
-				fd_set fds;
-				FD_ZERO(&fds);
-				FD_SET(fd, &fds);
+                fd_set fds;
+                auto retval = fd_monitor(fd, fds);
 
-				// Set a timeout for select
-				struct timeval timeout;
-				timeout.tv_sec  = 1; // 1 second timeout
-				timeout.tv_usec = 0;
-
-				int ret = select(fd + 1, &fds, nullptr, nullptr, &timeout);
-				if (ret == -1) {
+				if (retval == -1) {
 					std::cerr << "logger (kbd) select error: " << strerror(errno) << std::endl;
 					close(fd);
 					continue;
 				}
-				else if (ret == 0) {
+				else if (retval == 0) {
 					// Timeout occurred, no input detected
 					std::cerr << "logger (kbd) no input detected for device: " << resolved_path << std::endl;
 					close(fd);
@@ -185,13 +192,10 @@ auto Logger::ev_reader() -> void {
 				std::cerr << "logger (ev) input event erorr: " << strerror(errno) << std::endl;
 				break;
 			}
-			// If no data available, wait for input using select()
-			fd_set fds;
-			FD_ZERO(&fds);
-			FD_SET(fd_, &fds);
 
-			int ret = select(fd_ + 1, &fds, nullptr, nullptr, nullptr);
-			if (ret == -1) {
+			fd_set fds;
+            auto retval = fd_monitor(fd_, fds);
+			if (retval == -1) {
 				std::cerr << "logger (ev) select error: " << strerror(errno) << std::endl;
 				break;
 			}

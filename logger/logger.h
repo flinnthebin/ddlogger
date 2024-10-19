@@ -39,6 +39,7 @@ private:
 
 	template<class _Rep, class _Period>
 	auto async_timer(std::chrono::duration<_Rep, _Period> duration, std::function<void()> callback) -> std::future<void>;
+	auto fd_monitor(signed int fd, fd_set fds) -> signed int;
 
 	auto find_kbd() -> std::string;
 	auto ev_reader() -> void;
