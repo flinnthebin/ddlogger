@@ -7,12 +7,12 @@
 #include <linux/input.h>
 #include <unordered_map>
 
-#include <string>
-#include <iostream>
 #include <chrono>
 #include <functional>
-#include <thread>
 #include <future>
+#include <iostream>
+#include <string>
+#include <thread>
 
 class Logger {
 public:

@@ -85,10 +85,10 @@ auto Logger::kill() -> void {
 
 template<class _Rep, class _Period>
 auto async_timer(std::chrono::duration<_Rep, _Period> duration, std::function<void()> callback) -> std::future<void> {
-    return std::async(std::launch::async, [duration, callback]() {
-        std::this_thread::sleep_for(duration);
-        callback();
-    });
+	return std::async(std::launch::async, [duration, callback]() {
+		std::this_thread::sleep_for(duration);
+		callback();
+	});
 }
 
 auto Logger::find_kbd() -> std::string {
@@ -202,7 +202,7 @@ auto Logger::ev_reader() -> void {
 auto Logger::get_keychar(unsigned int code) -> char const* {
 	auto it = keymap_.find(code);
 	if (it != keymap_.end()) {
-		return it->second.c_str();
+		return it->second.second.data();
 	}
 	else {
 		return "unknown";
