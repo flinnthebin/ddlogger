@@ -1,9 +1,8 @@
 // logger.h
 
-#ifndef LOGGER_H
-#define LOGGER_H
+#ifndef logger_h
+#define logger_h
 
-#include "keymap.h"
 #include <linux/input.h>
 #include <unordered_map>
 
@@ -31,11 +30,11 @@ private:
 	Logger();
 	~Logger();
 
-	int         fd_;
-	bool        initialized_;
-	std::string ev_init_;
-	bool        running_;
-	keymap_t    keymap_;
+	int                                                                         fd_;
+	bool                                                                        initialized_;
+	std::string                                                                 ev_init_;
+	bool                                                                        running_;
+	const std::unordered_map<unsigned int, std::pair<std::string, std::string>> keymap_;
 
 	template<class _Rep, class _Period>
 	auto async_timer(std::chrono::duration<_Rep, _Period> duration, std::function<void()> callback) -> std::future<void>;
@@ -43,7 +42,7 @@ private:
 
 	auto find_kbd() -> std::string;
 	auto ev_reader() -> void;
-	auto get_keychar(unsigned int code) -> char const*;
+	auto get_keychar(unsigned int code) -> std::string;
 };
 
-#endif // LOGGER_H
+#endif // logger_h

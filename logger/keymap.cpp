@@ -1,6 +1,4 @@
-#include "keymap.h"
-
-std::unordered_map<unsigned int, std::pair<std::string, std::string>> const keymap = {
+const std::unordered_map<unsigned integer, std::pair<std::string, std::string>> keymap = {
   {0,  {"KEY_RESERVED", ""}           },
   {1,  {"KEY_ESC", "ESC"}             },
   {2,  {"KEY_1", "1"}                 },
