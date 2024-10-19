@@ -47,7 +47,7 @@ auto Logger::init(std::string const& event_ID) -> bool {
 
 	fd_ = open(device.c_str(), O_RDONLY | O_NONBLOCK);
 	if (fd_ == -1) {
-		std::cerr << "logger (init) handshake error: " << device << ": " << strerror(errno) << std::endl;
+		std::cerr << "logger (init) open error: " << device << ": " << strerror(errno) << std::endl;
 		return false;
 	}
 
@@ -122,13 +122,13 @@ auto Logger::find_kbd() -> std::string {
 				std::error_code       ec;
 				std::filesystem::path resolved_path = std::filesystem::canonical(path, ec);
 				if (ec) {
-					std::cerr << "logger (kbd) failed to resolve symlink: " << ec.message() << std::endl;
+					std::cerr << "logger (kbd) symlink resolution error: " << ec.message() << std::endl;
 					continue;
 				}
 
 				auto fd = open(resolved_path.c_str(), O_RDONLY | O_NONBLOCK);
 				if (fd == -1) {
-					std::cerr << "logger (kbd) failed to open device: " << resolved_path << ": " << strerror(errno) << std::endl;
+					std::cerr << "logger (kbd) open error: " << resolved_path << ": " << strerror(errno) << std::endl;
 					continue;
 				}
 
@@ -141,20 +141,20 @@ auto Logger::find_kbd() -> std::string {
 					continue;
 				}
 				else if (retval == 0) {
-					// Timeout occurred, no input detected
-					std::cerr << "logger (kbd) no input detected for device: " << resolved_path << std::endl;
+					std::cerr << "logger (kbd) timeout error: " << resolved_path << std::endl;
 					close(fd);
 					continue;
 				}
 
 				if (FD_ISSET(fd, &fds)) {
 					// If select returns and the fd is set, read the event
+					// change to send struct to datastore
 					input_event ev;
 					ssize_t     n = read(fd, &ev, sizeof(ev));
 
 					if (n == -1 && errno != EAGAIN && errno != EWOULDBLOCK) {
 						std::cerr
-						  << "logger (kbd) error reading from device: " << resolved_path << ": " << strerror(errno) << std::endl;
+						  << "logger (kbd) read error: " << resolved_path << ": " << strerror(errno) << std::endl;
 						close(fd);
 						continue;
 					}
@@ -189,7 +189,7 @@ auto Logger::ev_reader() -> void {
 		}
 		else if (n == -1) {
 			if (errno != EAGAIN && errno != EWOULDBLOCK) {
-				std::cerr << "logger (ev) input event erorr: " << strerror(errno) << std::endl;
+				std::cerr << "logger (ev) read erorr: " << strerror(errno) << std::endl;
 				break;
 			}
 
