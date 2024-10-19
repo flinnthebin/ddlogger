@@ -32,7 +32,7 @@ Logger::~Logger() {
 
 auto Logger::init(std::string const& event_ID) -> bool {
 	if (check_init()) {
-		std::cerr << "logger (init): logger is already initialized to ID {" << ev_init_ << "}." << std::endl;
+		std::cerr << "logger (init): logger process ID {" << ev_init_ << "}." << std::endl;
 		return true;
 	}
 
@@ -40,7 +40,7 @@ auto Logger::init(std::string const& event_ID) -> bool {
 	if (device.empty()) {
 		device = find_kbd();
 		if (device.empty()) {
-			std::cerr << "logger (init): failed to find keyboard." << std::endl;
+			std::cerr << "logger (init): no viable keyboard device." << std::endl;
 			return false;
 		}
 	}
