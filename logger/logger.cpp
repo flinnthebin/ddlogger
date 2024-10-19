@@ -92,21 +92,20 @@ auto async_timer(std::chrono::duration<_Rep, _Period> duration, std::function<vo
 }
 
 auto Logger::fd_monitor(signed int fd, fd_set fds) -> signed int {
-
 	struct timeval timeout;
 	timeout.tv_sec  = 1;
 	timeout.tv_usec = 0;
 
 	FD_ZERO(&fds);
 	FD_SET(fd, &fds);
-	
+
 	return select(fd + 1, &fds, nullptr, nullptr, &timeout);
 }
 
 auto Logger::find_kbd() -> std::string {
-	std::string device_path;
+	std::string       device_path;
 	const std::string hardware_path = "/dev/input/by-id";
-    const std::string kbd_id = "-event-kbd";
+	const std::string kbd_id        = "-event-kbd";
 
 	std::filesystem::path const input_dir(hardware_path);
 
@@ -132,8 +131,8 @@ auto Logger::find_kbd() -> std::string {
 					continue;
 				}
 
-                fd_set fds;
-                auto retval = fd_monitor(fd, fds);
+				fd_set fds;
+				auto   retval = fd_monitor(fd, fds);
 
 				if (retval == -1) {
 					std::cerr << "logger (kbd) select error: " << strerror(errno) << std::endl;
@@ -153,8 +152,7 @@ auto Logger::find_kbd() -> std::string {
 					ssize_t     n = read(fd, &ev, sizeof(ev));
 
 					if (n == -1 && errno != EAGAIN && errno != EWOULDBLOCK) {
-						std::cerr
-						  << "logger (kbd) read error: " << resolved_path << ": " << strerror(errno) << std::endl;
+						std::cerr << "logger (kbd) read error: " << resolved_path << ": " << strerror(errno) << std::endl;
 						close(fd);
 						continue;
 					}
@@ -194,7 +192,7 @@ auto Logger::ev_reader() -> void {
 			}
 
 			fd_set fds;
-            auto retval = fd_monitor(fd_, fds);
+			auto   retval = fd_monitor(fd_, fds);
 			if (retval == -1) {
 				std::cerr << "logger (ev) select error: " << strerror(errno) << std::endl;
 				break;
