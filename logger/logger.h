@@ -1,24 +1,23 @@
-// logger.h
+m // logger.h
 
 #ifndef logger_h
 #define logger_h
 
+#include "eventstruct.h"
+
 #include <linux/input.h>
 #include <unordered_map>
 
-#include <chrono>
-#include <functional>
-#include <future>
 #include <iostream>
 #include <string>
 #include <thread>
 
-class Logger {
+class logger {
 public:
-	static Logger& get_instance();
+	static logger& get_instance();
 
-	Logger(Logger const&)            = delete;
-	Logger& operator=(Logger const&) = delete;
+	logger(logger const&)            = delete;
+	logger& operator=(logger const&) = delete;
 
 	auto init(std::string const& event_ID = "") -> bool;
 	auto check_init() const -> bool;
@@ -27,13 +26,13 @@ public:
 	auto kill() -> void;
 
 private:
-	Logger();
-	~Logger();
+	logger();
+	~logger();
 
 	int                                                                         fd_;
 	bool                                                                        initialized_;
-	std::string                                                                 ev_init_;
 	bool                                                                        running_;
+	std::string                                                                 ev_init_;
 	const std::unordered_map<unsigned int, std::pair<std::string, std::string>> keymap_;
 
 	static auto
