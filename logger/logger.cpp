@@ -110,14 +110,6 @@ auto Logger::
 	return tmp;
 }
 
-template<class _Rep, class _Period>
-auto async_timer(std::chrono::duration<_Rep, _Period> duration, std::function<void()> callback) -> std::future<void> {
-	return std::async(std::launch::async, [duration, callback]() {
-		std::this_thread::sleep_for(duration);
-		callback();
-	});
-}
-
 auto Logger::fd_monitor(signed int fd, fd_set fds) -> signed int {
 	struct timeval timeout;
 	timeout.tv_sec  = 1;
