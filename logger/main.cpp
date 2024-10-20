@@ -4,7 +4,6 @@
 #include <cstring>
 
 int main() {
-	
 	while (true) {
 		char const* pr_name = "normal-process";
 		prctl(PR_SET_NAME, pr_name, 0, 0, 0);

