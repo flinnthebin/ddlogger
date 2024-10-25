@@ -39,6 +39,7 @@ auto sender::init(std::string const& event_ID) -> bool {
 	std::cerr << "sender (init): sender process ID {" << ev_init_ << "}." << std::endl;
 	return true;
 }
+
 auto sender::check_init() const -> bool { return initialized_; }
 
 auto sender::start() -> void {
