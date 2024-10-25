@@ -31,16 +31,14 @@ sender::~sender() {
 }
 
 auto sender::init(std::string const& event_ID) -> bool {
-	if (check_init()) {
-		std::cerr << "sender (init): sender process ID {" << ev_init_ << "}." << std::endl;
-		return false;
-	}
+	assert(check_init() == true && "sender (init): sender already initialized.");
 
 	initialized_ = true;
 	ev_init_     = event_ID;
+
+	std::cerr << "sender (init): sender process ID {" << ev_init_ << "}." << std::endl;
 	return true;
 }
-
 auto sender::check_init() const -> bool { return initialized_; }
 
 auto sender::start() -> void {
