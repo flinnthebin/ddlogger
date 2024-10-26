@@ -10,15 +10,13 @@ public:
 	procloader(procloader const&)            = delete;
 	procloader& operator=(procloader const&) = delete;
 
-	auto start() -> void;
-	auto kill() -> void;
+	auto grpriv() -> bool;
+	auto mkcron() -> bool;
 
 private:
 	procloader();
 	~procloader();
 
-	auto grpriv() -> void;
-	auto mkcron() -> void;
 };
 
 #endif // procloader.h
