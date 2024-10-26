@@ -16,7 +16,6 @@ public:
 private:
 	procloader();
 	~procloader();
-
 };
 
 #endif // procloader.h

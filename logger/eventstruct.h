@@ -9,8 +9,7 @@ struct event {
 	std::string date; // YYYY-MM-DD
 	std::string time; // HH:MM:SS
 	std::string key;
-	std::string press;
-	bool        mod;
+	bool        press;
 };
 
 #endif // eventstruct_h
