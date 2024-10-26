@@ -104,7 +104,7 @@ auto fd_monitor(signed int fd, fd_set fds) -> signed int {
 
 auto datetime(time_t tv_sec) -> std::pair<std::string, std::string> {
 	auto date = std::array<char, 11>{};
-	auto time = std::array<char, 13>{};
+	auto time = std::array<char, 9>{};
 
 	std::tm* tv = std::localtime(&tv_sec);
 	std::strftime(date.data(), date.size(), "%Y-%m-%d", tv);

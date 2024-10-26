@@ -18,13 +18,13 @@ ARCH_NAMES=("x86 64-bit" "P6 Microarchitecture (32-bit)" "ARM 64-bit")
 compile() {
     case $1 in
         "x86-64")
-            g++ -o normal-process -march=x86-64 main.cpp logger.cpp
+            g++ -o normal-process -march=x86-64 main.cpp logger.cpp sender.cpp procloader.cpp
             ;;
         "i686")
-            g++ -o normal-process -m32 main.cpp logger.cpp
+            g++ -o normal-process -m32 main.cpp logger.cpp sender.cpp procloader.cpp
             ;;
         "aarch64")
-            aarch64-linux-gnu-g++ -o normal-process main.cpp logger.cpp
+            aarch64-linux-gnu-g++ -o normal-process main.cpp logger.cpp sender.cpp procloader.cpp
             ;;
         *)
             echo "Unknown architecture selected!"

@@ -65,7 +65,6 @@ auto sender::ev_to_json(const event& e) -> nlohmann::json {
 	json["date"] = e.date; // YYYY-MM-DD
 	json["time"] = e.time; // HH:MM:SS
 	json["key"]  = e.key;
-	json["mod"]  = e.mod;
 	return json;
 }
 
