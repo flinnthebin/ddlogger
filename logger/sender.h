@@ -11,7 +11,7 @@
 
 class sender {
 public:
-	static sender& get_instance();
+	static sender& get_instance(tsq& queue);
 
 	sender(sender const&)            = delete;
 	sender& operator=(sender const&) = delete;
@@ -23,14 +23,14 @@ public:
 	auto kill() -> void;
 
 private:
-	sender();
+	sender(tsq& queue);
 	~sender();
 
 	auto ev_to_json(const event& e) -> nlohmann::json;
 	auto push_jsonev(nlohmann::json json) -> void;
 	auto process() -> void;
 
-	tsq         q_;
+	tsq&        q_;
 	std::thread work_;
 	bool        initialized_;
 	bool        running_;

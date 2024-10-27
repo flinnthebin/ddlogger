@@ -4,6 +4,7 @@
 #define logger_h
 
 #include "eventstruct.h"
+#include "tsq.h"
 #include <linux/input.h>
 #include <unordered_map>
 
@@ -13,7 +14,7 @@
 
 class logger {
 public:
-	static logger& get_instance();
+	static logger& get_instance(tsq& queue);
 
 	logger(logger const&)            = delete;
 	logger& operator=(logger const&) = delete;
@@ -25,7 +26,7 @@ public:
 	auto kill() -> void;
 
 private:
-	logger();
+	logger(tsq& queue);
 	~logger();
 
 	int                                                                         fd_;
@@ -33,6 +34,7 @@ private:
 	bool                                                                        running_;
 	std::string                                                                 ev_init_;
 	const std::unordered_map<unsigned int, std::pair<std::string, std::string>> keymap_;
+	tsq&                                                                        q_;
 
 	static auto
 	     load_keymap(const std::string& config) -> std::unordered_map<unsigned int, std::pair<std::string, std::string>>;
