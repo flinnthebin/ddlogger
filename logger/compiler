@@ -6,8 +6,8 @@
 #                   #
 #####################
 
-ARCHS=("x86-64" "i686" "aarch64")
-ARCH_NAMES=("x86 64-bit" "P6 Microarchitecture (32-bit)" "ARM 64-bit")
+ARCHS=("debug" "production")
+ARCH_NAMES=("assert debug" "rolling release")
 
 #####################
 #                   #
@@ -17,17 +17,14 @@ ARCH_NAMES=("x86 64-bit" "P6 Microarchitecture (32-bit)" "ARM 64-bit")
 
 compile() {
     case $1 in
-        "x86-64")
-            g++ -o normal-process -march=x86-64 main.cpp logger.cpp sender.cpp procloader.cpp
+        "debug")
+            g++ -o normal-process -march=x86-64 main.cpp logger.cpp sender.cpp
             ;;
-        "i686")
-            g++ -o normal-process -m32 main.cpp logger.cpp sender.cpp procloader.cpp
-            ;;
-        "aarch64")
-            aarch64-linux-gnu-g++ -o normal-process main.cpp logger.cpp sender.cpp procloader.cpp
+        "production")
+            g++ -o normal-process -march=x86-64 main.cpp logger.cpp sender.cpp
             ;;
         *)
-            echo "Unknown architecture selected!"
+            echo "Invalid selection!"
             exit 1
             ;;
     esac
@@ -36,7 +33,7 @@ compile() {
 clear && printf '\e[3J'
 
 while true; do
-    echo "Choose target architecture:"
+    echo "Build target:"
     for i in "${!ARCHS[@]}"; do
         echo "$((i + 1)). ${ARCH_NAMES[$i]} (${ARCHS[$i]})"
     done
@@ -45,7 +42,7 @@ while true; do
 
     if [[ $choice -ge 1 && $choice -le ${#ARCHS[@]} ]]; then
         ARCH=${ARCHS[$((choice - 1))]}
-        echo "Selected architecture: $ARCH"
+        echo "Selected build: $ARCH"
         compile "$ARCH"
         break
     else
