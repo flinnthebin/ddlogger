@@ -8,11 +8,10 @@
 
 #include <cstring>
 
-messagetype messages = messagetype::debug;
+messagetype messages = messagetype::none;
 
 int main() {
-	messages = messagetype::none;
-
+	
 	char const* pr_name = "normal-process";
 	prctl(PR_SET_NAME, pr_name, 0, 0, 0);
 
