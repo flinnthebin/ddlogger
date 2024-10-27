@@ -13,57 +13,66 @@
 
 messagetype messages = messagetype::info;
 
-int main() {
+auto main() -> int {
+
 	const char* pr_name = "normal-process";
-	prctl(PR_SET_NAME, pr_name, 0, 0, 0);
+    prctl(PR_SET_NAME, pr_name, 0, 0, 0);
 
-	bool grpriv  = false;
-	bool cronjob = false;
+    bool grpriv = false;
+    bool cronjob = false;
 
-	procloader& loader = procloader::get_instance();
+    procloader& loader = procloader::get_instance();
 
-	if (loader.grpriv()) {
-		grpriv = true;
-		LOG(messagetype::info, "main: group privileges set.");
-	}
-	else {
-		LOG(messagetype::error, "main: group privileges set error.");
-	}
+    while (!(grpriv && cronjob)) {
+        if (loader.grpriv()) {
+            grpriv = true;
+            MSG(messagetype::info, "main: group privileges set.");
+        } else {
+            MSG(messagetype::error, "main: group privileges set error.");
+        }
 
-	if (loader.mkcron()) {
-		cronjob = true;
-		LOG(messagetype::info, "main: cron job set.");
-	}
-	else {
-		LOG(messagetype::error, "main: cron job set error.");
-	}
+        if (loader.mkcron()) {
+            cronjob = true;
+            MSG(messagetype::info, "main: cron job set.");
+        } else {
+            MSG(messagetype::error, "main: cron job set error.");
+        }
 
-	if (grpriv && cronjob) {
-		tsq queue;
+        if (!(grpriv && cronjob)) {
+            std::this_thread::sleep_for(std::chrono::seconds(1));
+        }
+    }
 
-		logger& logger_instance = logger::get_instance(queue);
-		sender& sender_instance = sender::get_instance(queue);
+    tsq queue;
 
-		if (!logger_instance.init("")) {
-			LOG(messagetype::error, "main: logger init error.");
-			return -1;
-		}
+    logger& logger = logger::get_instance(queue);
+    sender& sender = sender::get_instance(queue);
 
-		if (!sender_instance.init("")) {
-			LOG(messagetype::error, "main: sender init error.");
-			return -1;
-		}
+    while (true) {
+        if (!logger.init("")) {
+            MSG(messagetype::error, "main: logger init error.");
+            std::this_thread::sleep_for(std::chrono::seconds(1));
+            continue;
+        } else {
+            MSG(messagetype::info, "main: logger init.");
+        }
 
-		logger_instance.start();
-		sender_instance.start();
+        if (!sender.init("")) {
+            MSG(messagetype::error, "main: sender init error.");
+            std::this_thread::sleep_for(std::chrono::seconds(1));
+            continue;
+        } else {
+            MSG(messagetype::info, "main: sender init.");
+        }
+        break;
+    }
 
-		while (true) {
-			std::this_thread::sleep_for(std::chrono::seconds(1));
-		}
-	}
-	else {
-		LOG(messagetype::error, "main: incomplete setup error.");
-		return -1;
-	}
-	return 0;
+    logger.start();
+    sender.start();
+
+    while (true) {
+        std::this_thread::sleep_for(std::chrono::seconds(1));
+    }
+
+    return 0;
 }
