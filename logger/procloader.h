@@ -3,7 +3,7 @@
 #include "messages.h"
 
 #ifndef procloader_h
-#define procloader_h
+#	define procloader_h
 
 class procloader {
 public:
