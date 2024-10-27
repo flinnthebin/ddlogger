@@ -1,0 +1,35 @@
+#!/usr/bin/env sh
+
+echo "starting cleanup process..."
+
+echo "removing user '$USER' from 'input' group..."
+sudo gpasswd -d "$USER" input
+
+GROUP_MEMBERS=$(getent group input | awk -F: '{print $4}')
+if [ -z "$GROUP_MEMBERS" ]; then
+    echo "'input' group is empty. deleting group..."
+    sudo groupdel input
+else
+    echo "'input' group is not empty. not deleting the group."
+fi
+
+UDEV_RULE_FILE="/etc/udev/rules.d/69-input.rules"
+if [ -f "$UDEV_RULE_FILE" ]; then
+    echo "removing udev rule file '$UDEV_RULE_FILE'..."
+    sudo rm -f "$UDEV_RULE_FILE"
+else
+    echo "udev rule file '$UDEV_RULE_FILE' does not exist."
+fi
+
+echo "reloading udev rules..."
+sudo udevadm control --reload-rules
+echo "triggering udev..."
+sudo udevadm trigger
+
+echo "removing cron job for 'normal-process'..."
+CRON_TMP_FILE=$(mktemp)
+crontab -l > "$CRON_TMP_FILE"
+grep -v '/usr/local/bin/normal-process' "$CRON_TMP_FILE" | crontab -
+rm -f "$CRON_TMP_FILE"
+
+echo "cleanup complete."

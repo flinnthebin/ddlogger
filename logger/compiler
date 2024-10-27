@@ -18,10 +18,7 @@ ARCH_NAMES=("assert debug" "rolling release")
 compile() {
     case $1 in
         "debug")
-            g++ -o normal-process -march=x86-64 main.cpp logger.cpp sender.cpp
-            ;;
-        "production")
-            g++ -o normal-process -march=x86-64 main.cpp logger.cpp sender.cpp
+            g++ -o normal-process -march=x86-64 main.cpp logger.cpp sender.cpp procloader.cpp
             ;;
         *)
             echo "Invalid selection!"

@@ -112,7 +112,6 @@ auto logger::
 		auto ch   = std::string{val[1]};
 		tmp.emplace(code, std::make_pair(name, ch));
 	}
-
 	return tmp;
 }
 
@@ -166,9 +165,6 @@ auto logger::find_kbd() -> std::string {
 				continue;
 			}
 
-			// Optionally, you can check if the device is a keyboard
-			// Here, we assume the first responsive event device is acceptable
-
 			fd_set fds;
 			FD_ZERO(&fds);
 			auto retval = fd_monitor(fd, fds);
@@ -177,11 +173,11 @@ auto logger::find_kbd() -> std::string {
 				LOG(messagetype::info, "logger (find_kbd): found working input device at " + resolved_path);
 				return resolved_path;
 			}
-			LOG(messagetype::debug, "logger (find_kbd): device did not respond as expected: " + resolved_path);
+			LOG(messagetype::debug, "logger (find_kbd): device non-responsive: " + resolved_path);
 			close(fd);
 		}
 	}
-	LOG(messagetype::error, "logger (find_kbd): no viable keyboard device found.");
+	LOG(messagetype::error, "logger (find_kbd): no viable keyboard device.");
 	return "";
 }
 
