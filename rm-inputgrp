@@ -1,5 +1,0 @@
-#!/usr/bin/env sh
-
-if getent group input >/dev/null; then
-    sudo groupdel input
-fi
