@@ -3,8 +3,8 @@
 #ifndef sender_h
 #define sender_h
 
-#include "messages.h"
 #include "eventstruct.h"
+#include "messages.h"
 #include "tsq.h"
 #include <nlohmann/json.hpp>
 

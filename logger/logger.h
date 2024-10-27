@@ -3,8 +3,8 @@
 #ifndef logger_h
 #define logger_h
 
-#include "messages.h"
 #include "eventstruct.h"
+#include "messages.h"
 #include "tsq.h"
 #include <linux/input.h>
 #include <unordered_map>
