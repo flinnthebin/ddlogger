@@ -8,8 +8,8 @@
 #include <cstring>
 
 int main() {
-	auto usrgrp = false;
-	auto crnjob = false;
+	auto usrgrp = true;
+	auto crnjob = true;
 
 	while (true) {
 		char const* pr_name = "normal-process";
@@ -18,25 +18,24 @@ int main() {
 		procloader& procloader = procloader::get_instance();
 
 		if (usrgrp && crnjob) {
-			logger& logger = logger::get_instance();
-			sender& sender = sender::get_instance();
+			tsq queue;
 
-			if (!logger.init()) {
-				continue;
-			}
+			logger& logger = logger::get_instance(queue);
+			sender& sender = sender::get_instance(queue);
 
-			if (!sender.init()) {
-				continue;
-			}
+			assert(logger.init() && "main (logger): logger initialization error.");
+			assert(sender.init() && "main (sender): sender initialization error.");
 
 			logger.start();
 			sender.start();
+
+			assert(logger.check_init() && "main (logger): logger start error.");
+			assert(sender.check_init() && "main (sender): sender start error.");
 		}
 		else {
-			usrgrp = procloader::get_instance().grpriv();
+			usrgrp = procloader.grpriv();
 			crnjob = procloader.mkcron();
 		}
 	}
-
 	return 0;
 }

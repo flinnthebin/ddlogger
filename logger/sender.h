@@ -7,6 +7,7 @@
 #include "tsq.h"
 #include <nlohmann/json.hpp>
 
+#include <atomic>
 #include <thread>
 
 class sender {
@@ -30,11 +31,12 @@ private:
 	auto push_jsonev(nlohmann::json json) -> void;
 	auto process() -> void;
 
-	tsq&        q_;
-	std::thread work_;
-	bool        initialized_;
-	bool        running_;
-	std::string ev_init_;
+	int               fd_;
+	bool              initialized_;
+	std::atomic<bool> running_;
+	std::string       ev_init_;
+	tsq&              q_;
+	std::thread       work_;
 };
 
 #endif // sender_h

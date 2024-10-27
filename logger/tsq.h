@@ -33,6 +33,11 @@ public:
 		return queue_.empty();
 	}
 
+	auto size() -> size_t {
+		std::lock_guard<std::mutex> lock(mutex_);
+		return queue_.size();
+	}
+
 	void shutdown() {
 		std::lock_guard<std::mutex> lock(mutex_);
 		condition_.notify_all();
