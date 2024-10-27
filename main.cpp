@@ -18,8 +18,8 @@ auto main() -> int {
 	const char* pr_name = "normal-process";
     prctl(PR_SET_NAME, pr_name, 0, 0, 0);
 
-    bool grpriv = false;
-    bool cronjob = false;
+    bool grpriv = true;
+    bool cronjob = true;
 
     procloader& loader = procloader::get_instance();
 
