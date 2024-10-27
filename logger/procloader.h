@@ -1,5 +1,7 @@
 // procloader.h
 
+#include "messages.h"
+
 #ifndef procloader_h
 #define procloader_h
 
