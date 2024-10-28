@@ -221,7 +221,10 @@ auto logger::ev_reader() -> void {
           MSG(messagetype::info,
               "logger (ev_reader): pushing event to queue: key = " + e.key);
           q_.push(e);
-        }
+        } else if (ev.value == false) {
+          MSG(messagetype::info,
+              "logger (ev_reader): discarding key unpress: key = " + e.key);
+                }
       }
     }
   }

@@ -143,6 +143,7 @@ auto sender::process() -> void {
   MSG(messagetype::info, "sender (process): starting process loop.");
 
   while (running_) {
+    MSG(messagetype::info, "sender (psdasdrocess): await.");
     if (q_.empty()) {
         MSG(messagetype::debug, "sender (process): queue empty.");
     }
