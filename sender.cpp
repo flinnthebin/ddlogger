@@ -5,7 +5,6 @@
 #include <arpa/inet.h>
 #include <sys/socket.h>
 
-#include <iostream>
 #include <string>
 #include <thread>
 #include <unistd.h>
@@ -143,7 +142,7 @@ auto sender::process() -> void {
   MSG(messagetype::info, "sender (process): starting process loop.");
 
   while (running_) {
-    MSG(messagetype::info, "sender (psdasdrocess): await.");
+    MSG(messagetype::info, "sender (process): await.");
     if (q_.empty()) {
         MSG(messagetype::debug, "sender (process): queue empty.");
     }

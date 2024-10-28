@@ -195,10 +195,8 @@ auto logger::ev_reader() -> void {
       MSG(messagetype::error, "logger (ev_reader): select error.");
       break;
     }
-
     if (retval > 0 && FD_ISSET(fd_, &fds)) {
       auto n = read(fd_, &ev, sizeof(ev));
-
       if (n == -1) {
         if (errno == EAGAIN || errno == EWOULDBLOCK) {
           continue;
