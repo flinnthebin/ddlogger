@@ -82,5 +82,22 @@
     "80": ["KEY_KP2", "KP2"],
     "81": ["KEY_KP3", "KP3"],
     "82": ["KEY_KP0", "KP0"],
-    "83": ["KEY_KPDOT", "."]
+    "83": ["KEY_KPDOT", "."],
+    "87": ["KEY_F11", "F11"],
+    "88": ["KEY_F12", "F12"],
+    "97": [ "KEY_RIGHTCTRL", "CTRL"],
+    "102": ["KEY_HOME", "HOME"],
+    "103": ["KEY_UP", "UP"],
+    "104": ["KEY_PAGEUP", "PAGEUP"],
+    "105": ["KEY_LEFT", "LEFT"],
+    "106": ["KEY_RIGHT", "RIGHT"],
+    "108": ["KEY_DOWN", "DOWN"],
+    "109": ["KEY_PAGEDOWN", "PAGEDOWN"],
+    "110": ["KEY_INSERT", "INSERT"],
+    "111": ["KEY_DELETE", "DELETE"],
+    "125": ["KEY_LEFTSUPER", "SUPER"],
+    "126": ["KEY_RIGHTSUPER", "SUPER"],
+    "272": ["LEFT_MOUSE", "LEFT_MOUSE"],
+    "273": ["RIGHT_MOUSE", "RIGHT_MOUSE"],
+    "274": ["CENTRE_MOUSE", "CENTRE_MOUSE"]
 }

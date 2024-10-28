@@ -213,7 +213,7 @@ auto logger::ev_reader() -> void {
 				auto  key_char = get_keychar(ev.code);
 				event e{dtg.first, dtg.second, key_char, ev.value ? true : false};
 				if (ev.value == true) {
-					MSG(messagetype::debug, "logger (ev_reader): pushing event to queue: key = " + e.key);
+					MSG(messagetype::info, "logger (ev_reader): pushing event to queue: key = " + e.key);
 					q_.push(e);
 				}
 			}
