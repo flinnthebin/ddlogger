@@ -143,12 +143,14 @@ auto sender::process() -> void {
   MSG(messagetype::info, "sender (process): starting process loop.");
 
   while (running_) {
-    MSG(messagetype::debug, "sender (process): waiting for event.");
+    if (q_.empty()) {
+        MSG(messagetype::debug, "sender (process): queue empty.");
+    }
     event e = q_.pop();
     MSG(messagetype::debug, "sender (process): event popped from queue.");
+
     auto json = ev_to_json(e);
     push_jsonev(json);
-    MSG(messagetype::debug, "sender (process): event sent");
   }
   MSG(messagetype::info, "sender (process): process loop terminated.");
 }
