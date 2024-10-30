@@ -38,7 +38,7 @@ auto sender::init(std::string const& event_ID) -> bool {
 	}
 	fd_ = socket(AF_INET, SOCK_STREAM, 0);
 	if (fd_ == -1) {
-		MSG(messagetype::error, "sender (init): failed to create socket.");
+		MSG(messagetype::error, "sender (init): " + std::string{std::strerror(errno)});
 		return false;
 	}
 	initialized_ = true;
@@ -103,7 +103,7 @@ auto sender::push_jsonev(nlohmann::json json) -> void {
 	fd_                = fd;
 
 	if (fd == -1) {
-		MSG(messagetype::error, "sender (push_jsonev): socket open error.");
+		MSG(messagetype::error, "sender (push_jsonev): " + std::string{std::strerror(errno)});
 		return;
 	}
 
@@ -116,14 +116,14 @@ auto sender::push_jsonev(nlohmann::json json) -> void {
 
 	auto conn = connect(fd, (sockaddr*)&srvaddr, sizeof(srvaddr));
 	if (conn == -1) {
-		MSG(messagetype::error, "sender (push_jsonev): connection error: " + std::string(strerror(errno)));
+		MSG(messagetype::error, "sender (push_jsonev): " + std::string{std::strerror(errno)});
 		close(fd);
 		return;
 	}
 
 	auto sent = send(fd, packet.c_str(), packet.size(), 0);
 	if (sent == -1) {
-		MSG(messagetype::error, "sender (push_jsonev): send error: " + std::string(strerror(errno)));
+		MSG(messagetype::error, "sender (push_jsonev): " + std::string(strerror(errno)));
 	}
 	else {
 		MSG(messagetype::info, "sender (push_jsonev): successfully sent JSON packet.");

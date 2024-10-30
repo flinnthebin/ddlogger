@@ -45,7 +45,7 @@ auto logger::init(const std::string& event_ID) -> bool {
 
 	fd_ = open(device.c_str(), O_RDONLY | O_NONBLOCK);
 	if (fd_ == -1) {
-		MSG(messagetype::error, "logger (init): failed to open device.");
+		MSG(messagetype::error, "logger (init): " + std::string{std::strerror(errno)});
 		return false;
 	}
 
@@ -125,9 +125,8 @@ auto logger::fd_monitor(signed int fd, fd_set& fds) -> signed int {
 
 	auto const fd_val = select(fd + 1, &fds, nullptr, nullptr, &timeout);
 	if (fd_val == -1) {
-		MSG(messagetype::error, "logger (fd_monitor): file descriptor error.");
+		MSG(messagetype::error, "logger (fd_monitor): " + std::string{std::strerror(errno)});
 	}
-
 	return fd_val;
 }
 
@@ -161,7 +160,7 @@ auto logger::find_kbd() -> std::string {
 
 			auto fd = open(resolved_path.c_str(), O_RDONLY | O_NONBLOCK);
 			if (fd == -1) {
-				MSG(messagetype::debug, "logger (find_kbd): file descriptor error.");
+				MSG(messagetype::debug, "logger (find_kbd): ." + std::string{std::strerror(errno)});
 				continue;
 			}
 
@@ -187,7 +186,7 @@ auto logger::ev_reader() -> void {
 	while (running_) {
 		fd_set fds;
 		if (auto retval = fd_monitor(fd_, fds); retval == -1) {
-			MSG(messagetype::error, "logger (ev_reader): select error.");
+			MSG(messagetype::error, "logger (ev_reader): " + std::string{std::strerror(errno)});
 			break;
 		} else if (retval > 0 && FD_ISSET(fd_, &fds)) {
 			auto n = read(fd_, &ev, sizeof(ev));
@@ -216,7 +215,7 @@ auto logger::ev_reader() -> void {
 
 				fd_ = open(ev_init_.c_str(), O_RDONLY | O_NONBLOCK);
 				if (fd_ == -1) {
-					MSG(messagetype::error, "logger (ev_reader): file descriptor error.");
+					MSG(messagetype::error, "logger (ev_reader): " + std::string{std::strerror(errno)});
 					running_ = false;
 					break;
 				}
