@@ -16,38 +16,37 @@
 
 class logger {
 public:
-  static logger &get_instance(tsq &queue);
+	static logger& get_instance(tsq& queue);
 
-  logger(logger const &) = delete;
-  logger &operator=(logger const &) = delete;
+	logger(logger const&)            = delete;
+	logger& operator=(logger const&) = delete;
 
-  auto init(std::string const &event_ID = "") -> bool;
-  auto check_init() const -> bool;
+	auto init(std::string const& event_ID = "") -> bool;
+	auto check_init() const -> bool;
 
-  auto start() -> void;
-  auto kill() -> void;
+	auto start() -> void;
+	auto kill() -> void;
 
 private:
-  logger(tsq &queue);
-  ~logger();
+	logger(tsq& queue);
+	~logger();
 
-  int fd_;
-  bool initialized_;
-  std::atomic<bool> running_;
-  std::string ev_init_;
-  const std::unordered_map<unsigned int, std::pair<std::string, std::string>>
-      keymap_;
-  tsq &q_;
-  std::thread work_;
+	int                                                                         fd_;
+	bool                                                                        initialized_;
+	std::atomic<bool>                                                           running_;
+	std::string                                                                 ev_init_;
+	const std::unordered_map<unsigned int, std::pair<std::string, std::string>> keymap_;
+	tsq&                                                                        q_;
+	std::thread                                                                 work_;
 
-  static auto load_keymap(const std::string &config)
-      -> std::unordered_map<unsigned int, std::pair<std::string, std::string>>;
-  auto fd_monitor(signed int fd, fd_set &fds) -> signed int;
-  auto datetime(time_t tv_sec) -> std::pair<std::string, std::string>;
+	static auto
+	     load_keymap(const std::string& config) -> std::unordered_map<unsigned int, std::pair<std::string, std::string>>;
+	auto fd_monitor(signed int fd, fd_set& fds) -> signed int;
+	auto datetime(time_t tv_sec) -> std::pair<std::string, std::string>;
 
-  auto find_kbd() -> std::string;
-  auto ev_reader() -> void;
-  auto get_keychar(unsigned int code) -> std::string;
+	auto find_kbd() -> std::string;
+	auto ev_reader() -> void;
+	auto get_keychar(unsigned int code) -> std::string;
 };
 
 #endif // logger_h
