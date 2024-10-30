@@ -123,12 +123,12 @@ auto logger::fd_monitor(signed int fd, fd_set& fds) -> signed int {
 	FD_ZERO(&fds);
 	FD_SET(fd, &fds);
 
-	auto const retval = select(fd + 1, &fds, nullptr, nullptr, &timeout);
-	if (retval == -1) {
-		MSG(messagetype::error, "logger (fd_monitor): select error.");
+	auto const fd_val = select(fd + 1, &fds, nullptr, nullptr, &timeout);
+	if (fd_val == -1) {
+		MSG(messagetype::error, "logger (fd_monitor): file descriptor error.");
 	}
 
-	return retval;
+	return fd_val;
 }
 
 auto logger::datetime(time_t tv_sec) -> std::pair<std::string, std::string> {
@@ -186,12 +186,10 @@ auto logger::ev_reader() -> void {
 	auto ev = input_event{};
 	while (running_) {
 		fd_set fds;
-		auto   retval = fd_monitor(fd_, fds);
-		if (retval == -1) {
+		if (auto retval = fd_monitor(fd_, fds); retval == -1) {
 			MSG(messagetype::error, "logger (ev_reader): select error.");
 			break;
-		}
-		if (retval > 0 && FD_ISSET(fd_, &fds)) {
+		} else if (retval > 0 && FD_ISSET(fd_, &fds)) {
 			auto n = read(fd_, &ev, sizeof(ev));
 			if (n == -1) {
 				if (errno == EAGAIN || errno == EWOULDBLOCK) {

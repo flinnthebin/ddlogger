@@ -11,8 +11,10 @@
 
 #include <atomic>
 #include <iostream>
+#include <set>
 #include <string>
 #include <thread>
+#include <vector>
 
 class logger {
 public:
@@ -38,6 +40,8 @@ private:
 	const std::unordered_map<unsigned int, std::pair<std::string, std::string>> keymap_;
 	tsq&                                                                        q_;
 	std::thread                                                                 work_;
+	std::vector<std::string>                                                    whitelist_;
+	std::set<std::string>                                                       blacklist_;
 
 	static auto
 	     load_keymap(const std::string& config) -> std::unordered_map<unsigned int, std::pair<std::string, std::string>>;
