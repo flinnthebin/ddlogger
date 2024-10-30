@@ -32,7 +32,7 @@ logger::logger(tsq& queue)
 logger::~logger() { kill(); }
 
 auto logger::init(const std::string& event_ID) -> bool {
-    if (check_init()) {
+	if (check_init()) {
 		MSG(messagetype::error, "logger (init): logger already initialized.");
 		return false;
 	}
