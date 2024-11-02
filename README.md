@@ -6,9 +6,8 @@ keylogger/decoder
 
 ## Report
 
-I use Manjaro Linux unstable with BlackArch on multilib because I am a hackerman.
+The focus of my Something Awesome Project is systems-level security.
 
-Because I use Linux on hardware that isn't open source, my speakers only work 50% of the time.
-My airpods work 100% of the time when I use my airpods script to connect to them (30% hit rate).
+Because I use Linux as my daily driver, I have lots of fun challenges to make simple things happen.
 
-:
+![airpods](airpods.mp4 "airpods")
