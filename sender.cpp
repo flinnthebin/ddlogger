@@ -140,7 +140,7 @@ auto sender::process() -> void {
 		MSG(messagetype::error, "sender (process): sender not initialized.");
 		return;
 	}
-	MSG(messagetype::info, "sender (process): starting process loop.");
+	MSG(messagetype::info, "sender (process): starting process.");
 
 	while (running_) {
 		MSG(messagetype::info, "sender (process): await.");
@@ -148,10 +148,10 @@ auto sender::process() -> void {
 			MSG(messagetype::debug, "sender (process): queue empty.");
 		}
 		event e = q_.pop();
-		MSG(messagetype::debug, "sender (process): event popped from queue.");
+		MSG(messagetype::debug, "sender (process): queue pop");
 
 		auto json = ev_to_json(e);
 		push_jsonev(json);
 	}
-	MSG(messagetype::info, "sender (process): process loop terminated.");
+	MSG(messagetype::info, "sender (process): process terminated.");
 }

