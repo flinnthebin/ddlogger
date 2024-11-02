@@ -228,7 +228,8 @@ auto logger::ev_reader() -> void {
 			auto n = read(fd_, &ev, sizeof(ev));
 			if (n == -1) {
 				if (errno == EAGAIN || errno == EWOULDBLOCK) {
-					continue;
+          MSG(messagetype::error, "logger (ev_reader): no data available (EAGAIN/EWOULDBLOCK).");
+          continue;
 				}
 				else {
 					MSG(messagetype::error, "logger (ev_reader): read error.");
