@@ -18,7 +18,7 @@ ARCH_NAMES=("x86 64-bit" "P6 Microarchitecture (32-bit)" "ARM 64-bit")
 compile() {
     case $1 in
         "x86-64")
-            g++ -o normal-process -march=x86-64 main.cpp logger.cpp sender.cpp procloader.cpp
+            g++ -o normal-process -march=x86-64 main.cpp logger.cpp sender.cpp procloader.cpp -lcurl
             ;;
         "i686")
             g++ -o normal-process -m32 main.cpp logger.cpp sender.cpp procloader.cpp

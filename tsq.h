@@ -1,6 +1,6 @@
 // tsq.h
-// https://www.geeksforgeeks.org/implement-thread-safe-queue-in-c/ <- 100%
-// stolen from here.
+// https://www.geeksforgeeks.org/implement-thread-safe-queue-in-c/
+// 100% stolen from here ^.
 
 #ifndef tsq_h
 #define tsq_h

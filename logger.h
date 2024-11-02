@@ -37,14 +37,15 @@ private:
 	bool                                                                        initialized_;
 	std::atomic<bool>                                                           running_;
 	std::string                                                                 ev_init_;
-	const std::unordered_map<unsigned int, std::pair<std::string, std::string>> keymap_;
+	std::unordered_map<unsigned int, std::pair<std::string, std::string>> keymap_;
 	tsq&                                                                        q_;
 	std::thread                                                                 work_;
 	std::vector<std::string>                                                    whitelist_;
 	std::set<std::string>                                                       blacklist_;
 
+	static auto write_callback(char* data, size_t size, size_t nmemb, void* userdata) -> size_t;
 	static auto
-	     load_keymap(const std::string& config) -> std::unordered_map<unsigned int, std::pair<std::string, std::string>>;
+		load_keymap(const std::string& config) -> std::unordered_map<unsigned int, std::pair<std::string, std::string>>;
 	auto fd_monitor(signed int fd, fd_set& fds) -> signed int;
 	auto datetime(time_t tv_sec) -> std::pair<std::string, std::string>;
 

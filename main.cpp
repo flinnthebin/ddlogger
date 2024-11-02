@@ -5,6 +5,7 @@
 #include "procloader.h"
 #include "sender.h"
 #include "tsq.h"
+#include <curl/curl.h>
 #include <sys/prctl.h>
 
 #include <chrono>
@@ -14,6 +15,12 @@
 messagetype messages = messagetype::debug;
 
 auto main() -> int {
+	CURLcode res = curl_global_init(CURL_GLOBAL_DEFAULT);
+	if (res != CURLE_OK) {
+		MSG(messagetype::error, "main: curl_global_init() failed: " + std::string{curl_easy_strerror(res)});
+		return 1;
+	}
+
 	const char* pr_name = "normal-process";
 	prctl(PR_SET_NAME, pr_name, 0, 0, 0);
 
@@ -77,5 +84,6 @@ auto main() -> int {
 		std::this_thread::sleep_for(std::chrono::seconds(1));
 	}
 
+	curl_global_cleanup();
 	return 0;
 }
