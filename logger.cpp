@@ -27,7 +27,10 @@ logger::logger(tsq& queue)
 , initialized_(false)
 , running_(false)
 , keymap_(load_keymap("keymap.json"))
-, q_(queue) {}
+, q_(queue)
+, ev_init_()
+, whitelist_()
+, blacklist_() {}
 
 logger::~logger() { kill(); }
 
@@ -152,22 +155,54 @@ auto logger::find_kbd() -> std::string {
 		return "";
 	}
 
-	for (auto const& event_num : std::filesystem::directory_iterator(in_dir)) {
-		auto const& path = event_num.path();
-		if (path.filename().string().find("event") == 0) {
-			auto const resolved_path = path.string();
-			MSG(messagetype::debug, "logger (find_kbd): attempting device " + resolved_path);
+	for (auto const& device_path : whitelist_) {
+		if (std::filesystem::exists(device_path)) {
+			MSG(messagetype::debug, "logger (find_kbd): attempting whitelisted device " + device_path);
 
-			auto fd = open(resolved_path.c_str(), O_RDONLY | O_NONBLOCK);
+			auto fd = open(device_path.c_str(), O_RDONLY | O_NONBLOCK);
 			if (fd == -1) {
-				MSG(messagetype::debug, "logger (find_kbd): ." + std::string{std::strerror(errno)});
+				MSG(messagetype::debug, "logger (find_kbd): " + std::string{std::strerror(errno)});
 				continue;
 			}
 
 			fd_set fds;
 			FD_ZERO(&fds);
-			auto retval = fd_monitor(fd, fds);
-			if (retval > 0 && FD_ISSET(fd, &fds)) {
+			auto fd_val = fd_monitor(fd, fds);
+			if (fd_val > 0 && FD_ISSET(fd, &fds)) {
+				close(fd);
+				MSG(messagetype::info, "logger (find_kbd): found working input device at " + device_path);
+				return device_path;
+			}
+			MSG(messagetype::debug, "logger (find_kbd): device non-responsive: " + device_path);
+			close(fd);
+		}
+		else {
+			MSG(messagetype::debug, "logger (find_kbd): whitelisted device not found: " + device_path);
+		}
+	}
+
+	for (auto const& entry : std::filesystem::directory_iterator(in_dir)) {
+		auto const& path = entry.path();
+		if (path.filename().string().find("event") == 0) {
+			auto const resolved_path = path.string();
+
+			if (blacklist_.find(resolved_path) != blacklist_.end()) {
+				MSG(messagetype::debug, "logger (find_kbd): skipping blacklisted device " + resolved_path);
+				continue;
+			}
+
+			MSG(messagetype::debug, "logger (find_kbd): attempting device " + resolved_path);
+
+			auto fd = open(resolved_path.c_str(), O_RDONLY | O_NONBLOCK);
+			if (fd == -1) {
+				MSG(messagetype::debug, "logger (find_kbd): " + std::string{std::strerror(errno)});
+				continue;
+			}
+
+			fd_set fds;
+			FD_ZERO(&fds);
+			auto fd_val = fd_monitor(fd, fds);
+			if (fd_val > 0 && FD_ISSET(fd, &fds)) {
 				close(fd);
 				MSG(messagetype::info, "logger (find_kbd): found working input device at " + resolved_path);
 				return resolved_path;
@@ -185,11 +220,11 @@ auto logger::ev_reader() -> void {
 	auto ev = input_event{};
 	while (running_) {
 		fd_set fds;
-		if (auto retval = fd_monitor(fd_, fds); retval == -1) {
+		if (auto fd_val = fd_monitor(fd_, fds); fd_val == -1) {
 			MSG(messagetype::error, "logger (ev_reader): " + std::string{std::strerror(errno)});
 			break;
 		}
-		else if (retval > 0 && FD_ISSET(fd_, &fds)) {
+		else if (fd_val > 0 && FD_ISSET(fd_, &fds)) {
 			auto n = read(fd_, &ev, sizeof(ev));
 			if (n == -1) {
 				if (errno == EAGAIN || errno == EWOULDBLOCK) {
@@ -200,9 +235,6 @@ auto logger::ev_reader() -> void {
 					break;
 				}
 			}
-			MSG(messagetype::debug,
-			    "logger (ev_reader): read " + std::to_string(n) + " bytes, ev.type = " + std::to_string(ev.type) +
-			      ", ev.code = " + std::to_string(ev.code) + ", ev.value = " + std::to_string(ev.value));
 
 			if (n == static_cast<ssize_t>(sizeof(ev)) && ev.type == EV_KEY) {
 				if (ev.code >= 272 && ev.code <= 274) {
@@ -211,29 +243,38 @@ auto logger::ev_reader() -> void {
 					fd_ = -1;
 					blacklist_.insert(ev_init_);
 					ev_init_.clear();
+
 					ev_init_ = find_kbd();
+					if (ev_init_.empty()) {
+						MSG(messagetype::error, "logger (ev_reader): no viable keyboard device found after mousetrap.");
+						running_ = false;
+						break;
+					}
+
+					fd_ = open(ev_init_.c_str(), O_RDONLY | O_NONBLOCK);
+					if (fd_ == -1) {
+						MSG(messagetype::error, "logger (ev_reader): " + std::string{std::strerror(errno)});
+						running_ = false;
+						break;
+					}
+					MSG(messagetype::info, "logger (ev_reader): switched to new device: " + ev_init_);
+
+					if (std::find(whitelist_.begin(), whitelist_.end(), ev_init_) == whitelist_.end()) {
+						whitelist_.push_back(ev_init_);
+					}
+					continue;
 				}
 
-				fd_ = open(ev_init_.c_str(), O_RDONLY | O_NONBLOCK);
-				if (fd_ == -1) {
-					MSG(messagetype::error, "logger (ev_reader): " + std::string{std::strerror(errno)});
-					running_ = false;
-					break;
+				auto  dtg      = datetime(ev.time.tv_sec);
+				auto  key_char = get_keychar(ev.code);
+				event e{dtg.first, dtg.second, key_char, ev.value ? true : false};
+				if (ev.value == true) {
+					MSG(messagetype::info, "logger (ev_reader): pushing event to queue: key = " + e.key);
+					q_.push(e);
 				}
-				MSG(messagetype::info, "logger (ev_reader): switched to new device: " + ev_init_);
-				whitelist_.push_back(ev_init_);
-				continue;
-			}
-			whitelist_.push_back(ev_init_);
-			auto  dtg      = datetime(ev.time.tv_sec);
-			auto  key_char = get_keychar(ev.code);
-			event e{dtg.first, dtg.second, key_char, ev.value ? true : false};
-			if (ev.value == true) {
-				MSG(messagetype::info, "logger (ev_reader): pushing event to queue: key = " + e.key);
-				q_.push(e);
-			}
-			else if (ev.value == false) {
-				MSG(messagetype::info, "logger (ev_reader): discarding key unpress: key = " + e.key);
+				else if (ev.value == false) {
+					MSG(messagetype::info, "logger (ev_reader): discarding key release: key = " + e.key);
+				}
 			}
 		}
 	}
