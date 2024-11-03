@@ -1,4 +1,4 @@
 # ddlogger
 
-![ddlogger](ddlogger.jpg "ddlogger")
+![ddlogger](docs/ddlogger.jpg "ddlogger")
 
