@@ -3,6 +3,7 @@
 #include "logger.h"
 
 #include <curl/curl.h>
+#include <linux/input.h>
 #include <linux/input-event-codes.h>
 #include <nlohmann/json.hpp>
 #include <sys/stat.h>

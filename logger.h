@@ -6,7 +6,6 @@
 #include "eventstruct.h"
 #include "messages.h"
 #include "tsq.h"
-#include <linux/input.h>
 #include <unordered_map>
 
 #include <atomic>
