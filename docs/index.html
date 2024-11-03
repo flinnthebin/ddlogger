@@ -55,7 +55,7 @@
   but I don't like to hold all that context in my head.</p>
 
   <h2>Procloader</h2>
-  <p>The procloader entity only has two jobs and then is killed by the main loop. The first job of the procloader is to
+  <p>The procloader entity only has two jobs, then falls out of scope and is destroyed. The first job of the procloader is to
   create a usergroup called 'input', which has permission to read from any /dev/input/ directories. This creates
   persistence in the system and should mean that any subsequent use of ddlogger does not require root privileges. The
   second job of the procloader is to create a cronjob that will run itself on boot, so that there is no requirement to
