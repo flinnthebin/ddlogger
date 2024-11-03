@@ -24,7 +24,7 @@
 
   <h2>AirPods</h2>
   <video width="600" controls>
-    <source src="https://raw.githubusercontent.com/flinnthebin/ddlogger/main/airpods.mp4" type="video/mp4">
+    <source src="https://raw.githubusercontent.com/flinnthebin/ddlogger/main/docs/airpods.mp4" type="video/mp4">
   </video>
   <p>Nice. See how, right at the end of the video, my AirPods script in the Bluetooth controller (bluetoothctl) leaks the output:</p>
 
@@ -33,7 +33,7 @@
 
   <h2>Fan</h2>
   <video width="600" controls>
-    <source src="https://raw.githubusercontent.com/flinnthebin/ddlogger/main/fan.mp4" type="video/mp4"> 
+    <source src="https://raw.githubusercontent.com/flinnthebin/ddlogger/main/docs/fan.mp4" type="video/mp4"> 
   </video>
   <p>I don't have access to the Alienware Command Center, so I created my own fan controller and manager. This was also
   achieved using file descriptors and deciphering the protocol (along with the parameters) that would enable me to
@@ -92,6 +92,13 @@
   I think the biggest strength of this project is the robustness of the design. Because it is modular and adheres to the
   principle of locality of behaviour, debugging is very straightforward. There isn't really any complex logic or data
   structures that I had to dream up, all of that is handled in the linux header files <linux/input.h> & <linux/input-event-codes.h></p>
+
+  <h1>ddlogger</h1>
+  <video width="600" controls>
+    <source src="https://raw.githubusercontent.com/flinnthebin/ddlogger/main/docs/demo.mp4" type="video/mp4">
+  </video>
+  <p>The next stage would be to write a decoder, that could interpret the JSON into a formatted text document.</p>
+
 </body>
 </html>
 
