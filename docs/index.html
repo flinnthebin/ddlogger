@@ -25,7 +25,6 @@
   <h2>AirPods</h2>
   <video width="600" controls>
     <source src="https://raw.githubusercontent.com/flinnthebin/ddlogger/main/airpods.mp4" type="video/mp4">
-    Your browser does not support the video tag.
   </video>
   <p>Nice. See how, right at the end of the video, my AirPods script in the Bluetooth controller (bluetoothctl) leaks the output:</p>
 
@@ -34,16 +33,49 @@
 
   <h2>Fan</h2>
   <video width="600" controls>
-    <source src="https://raw.githubusercontent.com/flinnthebin/ddlogger/main/fan.mp4" type="video/mp4">
-    Your browser does not support the video tag.
+    <source src="https://raw.githubusercontent.com/flinnthebin/ddlogger/main/fan.mp4" type="video/mp4"> 
   </video>
   <p>I don't have access to the Alienware Command Center, so I created my own fan controller and manager. This was also achieved using file descriptors.</p>
 
   <h2>What does that have to do with anything</h2>
-  <p>Similarly, ...</p>
+  <p>Similarly, ddlogger relies on finding the correct file descriptor for the systems keyboard input, then simply
+  executes a non-binding grab of that stream of data. This captures all the input that the computer receives from
+  the keyboard without any noticeable change in behaviour of the keyboard to the user.</p>
+
+  <h2>Ok, how does it all work then?</h2>
+  <p>I like to think of this program as a videogame, or sort of like an operating system. The main fuunction spins up on
+  the main thread, which will just spin forever unless it receieves a signal interrupt.
+
+  There are 3 singleton entities that exist in our game loop, each with distinct behaviours. Singletons were selected
+  for their thread-safety and compatibility with the design principle of 'locality of behaviour'. Locality of behaviour
+  basically just means each entity does one thing and only one thing. 
+  This just makes debugging easier and keeps the code more modular. It could all be done in one monolith class
+  but I don't like to hold all that context in my head.</p>
+
+  <h2>Procloader</h2>
+  <p>Our procloader entity only has two jobs and then is killed by the main loop. The first job of the procloader is to
+  create a usergroup called 'input', which has permission to read from any /dev/input/ directories. This creates
+  persistence in the system and should mean that any subsequent use of ddlogger does not require root privileges. The
+  second job of the procloader is to create a cronjob that will run itself on boot, so that there is no requirement to
+  call ddlogger on future system startups.</p>
+
+  <h2>Logger</h2>
+  <p>Our logger entity initializes by using cURL to download the keymap.json file that maps to my keyboard from the
+  github repo of this project. This design decision was made so that ddlogger could be compiled in pull but then have
+  the keyboard codes dynamically allocated based on the requirements of the application, without the need to recompile
+  the binary. The entity is spun up and then starts reading 24 byte structs from /dev/input/eventX. If suitable structs
+  are found that map to linux keypress event structs, the interpreted data is then converted into a JSON-serializable
+  struct and added to a threadsafe queue (which is a dependency of the logger during construction).</p>
+
+  <h2>Sender</h2>
+  <p>Like logger, sender is constructed using a dependency injection of the threadsafe queue. Because singletons are
+  threadsafe by design in C++ and the logger/sender use dependency injection during construction, I never ran into
+  any issues with entities operating on different threads accessing a shared data structure. This was really fortunate.
+  The sender waits until an event struct is in the queue, pops it off the queue, serializes the data into JSON and sends
+  the JSON to a remote server (in this case, 127.0.0.1:8080).</p>
 
   <h2>Conclusion</h2>
-  <p>With DDLogger, tracking key events on Linux systems has never been easier. Our focus on security ensures that all data is handled responsibly.</p>
+  <p>some conclusion</p>
 </body>
 </html>
 
