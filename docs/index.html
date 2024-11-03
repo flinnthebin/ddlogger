@@ -19,7 +19,7 @@
     <li>Robust and resilient</li>
   </ul>
 
-  <h2>Report</h2>
+  <h1>Background</h1>
   <p>Using Linux as my daily driver means I have many fun challenges to solve if I want to actually use my computer for any "normal" tasks. My speakers work about half the time, depending on whether I can get PulseAudio working. My AirPods work 100% of the time, as long as I call the script in the right state.</p>
 
   <h2>AirPods</h2>
@@ -35,14 +35,16 @@
   <video width="600" controls>
     <source src="https://raw.githubusercontent.com/flinnthebin/ddlogger/main/fan.mp4" type="video/mp4"> 
   </video>
-  <p>I don't have access to the Alienware Command Center, so I created my own fan controller and manager. This was also achieved using file descriptors.</p>
+  <p>I don't have access to the Alienware Command Center, so I created my own fan controller and manager. This was also
+  achieved using file descriptors and deciphering the protocol (along with the parameters) that would enable me to
+  change settings of the fan through the i8k kernel module.</p>
 
-  <h2>What does that have to do with anything</h2>
+  <h1>Implementation Details</h1>
   <p>Similarly, ddlogger relies on finding the correct file descriptor for the systems keyboard input, then simply
   executes a non-binding grab of that stream of data. This captures all the input that the computer receives from
   the keyboard without any noticeable change in behaviour of the keyboard to the user.</p>
 
-  <h2>Ok, how does it all work then?</h2>
+  <h2>Overview</h2>
   <p>I like to think of this program as a videogame, or sort of like an operating system. The main fuunction spins up on
   the main thread, which will just spin forever unless it receieves a signal interrupt.
 
@@ -53,14 +55,14 @@
   but I don't like to hold all that context in my head.</p>
 
   <h2>Procloader</h2>
-  <p>Our procloader entity only has two jobs and then is killed by the main loop. The first job of the procloader is to
+  <p>The procloader entity only has two jobs and then is killed by the main loop. The first job of the procloader is to
   create a usergroup called 'input', which has permission to read from any /dev/input/ directories. This creates
   persistence in the system and should mean that any subsequent use of ddlogger does not require root privileges. The
   second job of the procloader is to create a cronjob that will run itself on boot, so that there is no requirement to
   call ddlogger on future system startups.</p>
 
   <h2>Logger</h2>
-  <p>Our logger entity initializes by using cURL to download the keymap.json file that maps to my keyboard from the
+  <p>The logger entity initializes by using cURL to download the keymap.json file that maps to my keyboard from the
   github repo of this project. This design decision was made so that ddlogger could be compiled in pull but then have
   the keyboard codes dynamically allocated based on the requirements of the application, without the need to recompile
   the binary. The entity is spun up and then starts reading 24 byte structs from /dev/input/eventX. If suitable structs
@@ -73,6 +75,15 @@
   any issues with entities operating on different threads accessing a shared data structure. This was really fortunate.
   The sender waits until an event struct is in the queue, pops it off the queue, serializes the data into JSON and sends
   the JSON to a remote server (in this case, 127.0.0.1:8080).</p>
+
+  <h2>Messages</h2>
+  <p>Messages is a way of logging output to the terminal that facilitates debugging. I tend to agree with Casey Muratori
+  when it comes to projects that require live user input - test-driven development doesn't work. Fuzzing randomized
+  user input and determining controlled, deliberate user input in order to unit test a project is extremely hard. For
+  this reason, we just set a global variable messages to a level (none, info, error, warning, debug) and at compilation
+  time the output will be as desired.</p>
+
+
 
   <h2>Conclusion</h2>
   <p>some conclusion</p>
