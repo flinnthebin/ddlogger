@@ -1,2 +1,9 @@
 theme: jekyll-theme-cayman
+title: ddlogger - Something Awesome
+
+sass:
+  style: compressed
+
+include:
+  - docs/style.css
 

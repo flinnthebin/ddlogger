@@ -10,14 +10,9 @@
   <h1>ddlogger</h1>
 
   <h2>Introduction</h2>
-  <p>ddlogger is my Something Awesome Project, focusing on Linux systems-level security.</p>
+  <p>dlogger is my Something Awesome Project, focusing on Linux systems-level security.</p>
 
-  <h2>Features</h2>
-  <ul>
-    <li>Lightweight and efficient</li>
-    <li>Compatible with any Linux distro</li>
-    <li>Robust and resilient</li>
-  </ul>
+
 
   <h1>Background</h1>
   <p>Using Linux as my daily driver means I have many fun challenges to solve if I want to actually use my computer for any "normal" tasks. My speakers work about half the time, depending on whether I can get PulseAudio working. My AirPods work 100% of the time, as long as I call the script in the right state.</p>
@@ -82,6 +77,30 @@
   user input and determining controlled, deliberate user input in order to unit test a project is extremely hard. For
   this reason, we just set a global variable messages to a level (none, info, error, warning, debug) and at compilation
   time the output will be as desired.</p>
+
+  <h1>Critical Analysis</h1>
+  <h2>Weaknesses</h2>
+  <ul>
+    <li>main.cpp: 32 - this while loop could persist indefinitely, lazy design</li>
+    <li>logger.cpp - there is no resilience built in for the aware user. My computer alternates between event9 and
+        event13 on one USB port, If a user unplugged their keyboard logger wouldn't time out and find the new keyboard.</li>
+    <li>sender.cpp - if the queue is empty for a long period of time, sender does nothing to ensure that there isn't an
+      issue.</li>
+    <li>main.cpp - because all the work is done on the logger and sender work threads, main just functions as a
+        keepalive. this is lazy, main should be managing the activity of the entities or a manager entity should be
+        built that does more to make the program robust and resilient against system change
+  </ul>
+
+  <h2>Strengths</h2>
+    <ul>
+      <li>Entity design - designing the 3 main entities around threadsafe locality of behaviour paid off. the program is
+      relatively stable and even in the face of the weaknesses listed, performs pretty well.</li>
+      <li>Whitelist/blacklist - the mousetrap is a very fun thing to have in my program and required only little
+        modification to the keymap.json and some logic to make it work. the mousetrap inspired the program flow of
+        having a whitelist->unlisted/ignore blacklist search of the /dev/input drive for viable eventX candidate
+        devices.</li>
+      <li>good oop - I think I've used the singleton pattern well, but I would appreciate any feedback on that,
+        too.</li>
 
   <h2>Conclusion</h2>
   <p>This assignment was really fun, because we get to pick our own scope. While it is quite a different project than my
