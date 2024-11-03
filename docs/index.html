@@ -36,7 +36,8 @@ title: ddlogger - Something Awesome
   </video>
   <p>I don't have access to the Alienware Command Center, so I created my own fan controller and manager. This was also
   achieved using file descriptors and deciphering the protocol (along with the parameters) that would enable me to
-  change settings of the fan through the i8k kernel module.</p>
+  change settings of the fan through the i8k kernel module. Essentially, to change the fan speed controller we just use
+  the ioctl syscall, with the parameters (i8k_file_descriptor, fan_set_fan_offset, args_list)</p>
 
   <h1>Implementation Details</h1>
   <p>Similarly, ddlogger relies on finding the correct file descriptor for the systems keyboard input, then simply
