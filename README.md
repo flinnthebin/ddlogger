@@ -1,4 +1,3 @@
 # ddlogger
 
-![ddlogger](docs/ddlogger.jpg "ddlogger")
-
+a keylogger written in c++
